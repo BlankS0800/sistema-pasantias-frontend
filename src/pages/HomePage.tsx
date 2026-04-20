@@ -4,8 +4,6 @@ import { Footer } from '../components/Footer';
 import { VerticalInfoSection } from "../components/VerticalInfoSection";
 import { ChevronDown } from 'lucide-react';
 
-import logoText from '../assets/logo_text.png';
-
 interface PlatformData {
   mision: string;
   vision: string;
@@ -33,40 +31,31 @@ export const HomePage: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-white-main">
       <Header />
 
-      <section className="relative h-[65vh] flex items-center justify-center bg-radial-[at_50%_50%] from-secondary-blue/10 via-white-main to-white-main px-6 mt-[-1px]">
-        <div className="text-center flex flex-col items-center">
-          <img 
-            src={logoText} 
-            alt="Sistema de Pasantías" 
-            className="h-28 md:h-36 w-auto object-contain mb-6 opacity-90" 
-          />
-          <p className="text-xl text-dark-gray font-poppins max-w-2xl mx-auto">
-            La plataforma definitiva para la gestión de pasantías académicas y profesionales.
+      <section className="relative h-[60vh] flex items-center justify-center bg-radial-[at_50%_50%] from-secondary-blue/10 via-transparent to-transparent px-6">
+        <div className="text-center space-y-6 max-w-4xl">
+          {/* Tamaño de texto corregido para ser menos invasivo */}
+          <h1 className="text-4xl md:text-6xl font-montserrat font-extrabold text-institucional-blue tracking-tight leading-tight">
+            Impulsa tu <span className="text-main-green">Carrera</span> Profesional
+          </h1>
+          
+          <div className="w-16 h-1 bg-soft-green mx-auto rounded-full"></div>
+
+          <p className="text-lg md:text-xl text-dark-gray font-poppins max-w-xl mx-auto leading-relaxed opacity-80">
+            Conectamos el talento universitario con las empresas líderes del sector. 
           </p>
-          <div className="pt-16 animate-bounce">
-            <ChevronDown className="mx-auto text-medium-gray/70" size={32} strokeWidth={1.5} />
+          
+          <div className="pt-10 animate-bounce">
+            <ChevronDown className="mx-auto text-medium-gray/30" size={36} strokeWidth={1} />
           </div>
         </div>
       </section>
 
-      {/* Cuerpo Principal */}
-      <main className="flex-grow max-w-6xl mx-auto px-6 py-20 w-full space-y-4">
-        <VerticalInfoSection 
-          title="Misión" 
-          content={platformData.mision} 
-          type="mision" 
-        />
-        <VerticalInfoSection 
-          title="Visión" 
-          content={platformData.vision} 
-          type="vision" 
-        />
-        <VerticalInfoSection 
-          title="Objetivo" 
-          content={platformData.objetivo} 
-          type="objetivo" 
-        />
+      <main className="max-w-6xl mx-auto px-6 py-10 w-full space-y-2">
+        <VerticalInfoSection title="Misión" content={platformData.mision} type="mision" />
+        <VerticalInfoSection title="Visión" content={platformData.vision} type="vision" />
+        <VerticalInfoSection title="Objetivo" content={platformData.objetivo} type="objetivo" />
       </main>
+
       <Footer />
     </div>
   );
