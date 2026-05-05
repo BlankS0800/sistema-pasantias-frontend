@@ -19,7 +19,6 @@ export const VerticalInfoSection: React.FC<VerticalInfoSectionProps> = ({ title,
   return (
     <div className="flex flex-col md:flex-row items-center gap-8 py-12 border-b border-light-gray last:border-0 group">
       <div className="p-6 bg-white-main rounded-2xl shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300">
-        {/* 3. Lo renderizamos como un componente normal de React */}
         <SelectedIcon className="w-10 h-10 text-main-green" />
       </div>
       <div className="flex-1 text-center md:text-left">
