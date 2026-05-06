@@ -25,7 +25,7 @@ export const LoginPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-dark-gray ml-1">Correo Electrónico </label>
+              <label className="text-sm font-semibold text-dark-gray ml-1">Correo Electrónico O Usuario</label>
               <div className="relative group">
                 <Mail className="absolute left-3 top-3.5 text-medium-gray group-focus-within:text-secondary-blue transition-colors" size={20} />
                 <input 
