@@ -16,7 +16,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import logoIcon from '../assets/logo_icon.png';
-
+import { EmpresaPanel } from '../components/empresa/EmpresaPanel';
+import { PasantiasPanel } from '../components/pasantias/PasantiasPanel';
+import { JefePasantiasPanel } from '../components/jefe/JefePasantiasPanel';
 type Module =
   | 'dashboard'
   | 'empresa'
@@ -74,7 +76,9 @@ export const ManagerDashboard: React.FC = () => {
         return;
       }
 
-      if (usuarioParseado?.rol?.abreviacion !== 'GER_EMP') {
+      const rol = usuarioParseado?.rol?.abreviacion;
+
+      if (rol !== 'GER_EMP' && rol !== 'ENC_PAS') {
         navigate('/', { replace: true });
         return;
       }
@@ -120,7 +124,16 @@ export const ManagerDashboard: React.FC = () => {
     }
   };
 
-  const navItems = [
+  const rolActual = usuario?.rol?.abreviacion;
+
+  const navItemsGerente = [
+    { id: 'dashboard', label: 'Resumen', icon: LayoutDashboard },
+    { id: 'empresa', label: 'Mi Empresa', icon: Building2 },
+    { id: 'pasantias', label: 'Pasantías', icon: Briefcase },
+    { id: 'postulaciones', label: 'Postulaciones', icon: FileText },
+  ];
+
+  const navItemsEncargado = [
     { id: 'dashboard', label: 'Resumen', icon: LayoutDashboard },
     { id: 'empresa', label: 'Mi Empresa', icon: Building2 },
     { id: 'pasantias', label: 'Pasantías', icon: Briefcase },
@@ -129,6 +142,8 @@ export const ManagerDashboard: React.FC = () => {
     { id: 'evaluacion', label: 'Evaluación', icon: ClipboardCheck },
     { id: 'reportes', label: 'Reportes', icon: BarChart3 },
   ];
+
+  const navItems = rolActual === 'GER_EMP' ? navItemsGerente : navItemsEncargado;
 
   const renderContent = () => {
     switch (activeTab) {
@@ -198,17 +213,20 @@ export const ManagerDashboard: React.FC = () => {
 
       case 'empresa':
         return (
-          <ModuloTemporal
-            titulo="Gestión de Empresa"
-            descripcion="Aquí irá el módulo para ver o editar el perfil de la empresa y gestionar jefes de pasante."
+          <EmpresaPanel
+            puedeGestionarEmpresa={usuario?.rol?.abreviacion === 'GER_EMP'}
+            puedeGestionarEncargados={usuario?.rol?.abreviacion === 'GER_EMP'}
           />
         );
 
       case 'pasantias':
+        if (usuario?.rol?.abreviacion === 'ENC_PAS') {
+          return <JefePasantiasPanel />;
+        }
+
         return (
-          <ModuloTemporal
-            titulo="Ofertas de Pasantías"
-            descripcion="Aquí irá el CRUD de pasantías y el formulario para publicar nuevas ofertas."
+          <PasantiasPanel
+            puedeGestionar={usuario?.rol?.abreviacion === 'GER_EMP'}
           />
         );
 
@@ -296,8 +314,8 @@ export const ManagerDashboard: React.FC = () => {
                   setIsMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium ${isActive
-                    ? 'bg-main-green text-white-main shadow-md'
-                    : 'text-white-main/70 hover:bg-white-main/10 hover:text-white-main'
+                  ? 'bg-main-green text-white-main shadow-md'
+                  : 'text-white-main/70 hover:bg-white-main/10 hover:text-white-main'
                   }`}
               >
                 <Icon size={20} />

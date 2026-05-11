@@ -28,6 +28,15 @@ const App: React.FC = () => {
         />
 
         <Route
+          path="/jefe/dashboard"
+          element={
+            <ProtectedRoute rolPermitido="ENC_PAS">
+              <ManagerDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/pasante/dashboard"
           element={
             <ProtectedRoute rolPermitido="PAS">
