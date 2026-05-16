@@ -10,7 +10,7 @@ import { ExplorarView } from '../components/pasante/ExplorarView';
 import { BoletaView } from '../components/pasante/BoletaView';
 import { Sidebar } from '../components/pasante/Sidebar';
 import { Header } from '../components/pasante/Header';
-import { ChatWidget } from '../components/pasante/Chatwidget';
+import { ChatWidget } from '../components/pasante/ChatWidget';
 
 type InternModule = 
   | 'dashboard' 
