@@ -19,6 +19,10 @@ import logoIcon from '../assets/logo_icon.png';
 import { EmpresaPanel } from '../components/empresa/EmpresaPanel';
 import { PasantiasPanel } from '../components/pasantias/PasantiasPanel';
 import { JefePasantiasPanel } from '../components/jefe/JefePasantiasPanel';
+import { PostulacionesPanel } from '../components/empresa/PostulacionesPanel';
+import { JefeSeguimientoPanel } from '../components/jefe/JefeSeguimientoPanel';
+import { NotificationBell } from '../components/notificaciones/NotificationBell';
+import { EvaluacionFinalPanel } from '../components/jefe/EvaluacionFinalPanel';
 type Module =
   | 'dashboard'
   | 'empresa'
@@ -231,28 +235,13 @@ export const ManagerDashboard: React.FC = () => {
         );
 
       case 'postulaciones':
-        return (
-          <ModuloTemporal
-            titulo="Postulaciones Recibidas"
-            descripcion="Aquí se mostrarán las boletas de los estudiantes y las acciones para aprobar o rechazar."
-          />
-        );
+        return <PostulacionesPanel />;
 
       case 'seguimiento':
-        return (
-          <ModuloTemporal
-            titulo="Seguimiento de Pasantes"
-            descripcion="Aquí irá la revisión de actividades asignadas y control de bitácoras."
-          />
-        );
+        return <JefeSeguimientoPanel />;
 
       case 'evaluacion':
-        return (
-          <ModuloTemporal
-            titulo="Evaluación Final"
-            descripcion="Aquí irá el módulo para revisar o emitir el informe final del pasante."
-          />
-        );
+        return <EvaluacionFinalPanel />;
 
       case 'reportes':
         return (
@@ -341,7 +330,13 @@ export const ManagerDashboard: React.FC = () => {
         <header className="h-20 bg-white-main shadow-sm flex items-center justify-end px-8 z-10 border-b border-light-gray shrink-0">
           <div className="flex items-center gap-6">
             <button className="text-medium-gray hover:text-institucional-blue transition-colors relative">
-              <Bell size={24} />
+              <NotificationBell
+                onNavigate={(url) => {
+                  if (url?.includes('seguimiento')) {
+                    setActiveTab('seguimiento');
+                  }
+                }}
+              />
               <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-main-green rounded-full border-2 border-white-main"></span>
             </button>
 
