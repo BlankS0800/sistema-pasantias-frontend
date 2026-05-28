@@ -6,13 +6,14 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ManagerDashboard } from './pages/ManagerDashboard';
 import { InternDashboard } from './pages/InternDashboard';
+import { TutorDashboard } from './pages/TutorDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminDashboard } from './pages/AdminDashboard';
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-
         <Route path="/" element={<HomePage />} />
 
         <Route path="/login" element={<LoginPage />} />
@@ -45,6 +46,24 @@ const App: React.FC = () => {
           }
         />
 
+        <Route
+          path="/tutor/dashboard"
+          element={
+            <ProtectedRoute rolPermitido="TUT">
+              <TutorDashboard />
+            </ProtectedRoute>
+          }
+        />  
+
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute rolPermitido="ADMIN">
+               <AdminDashboard />
+            </ProtectedRoute>
+         }
+        />
+        
       </Routes>
     </BrowserRouter>
   );

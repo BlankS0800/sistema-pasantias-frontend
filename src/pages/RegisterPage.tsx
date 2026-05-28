@@ -13,12 +13,13 @@ import {
   MapPin,
   GraduationCap,
   AlertCircle,
+  BookUser,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 
-type TipoUsuario = '' | 'pasante' | 'gerente';
+type TipoUsuario = '' | 'pasante' | 'gerente' | 'tutor';
 
 interface RegisterFormData {
   nombre: string;
@@ -32,6 +33,7 @@ interface RegisterFormData {
   ci: string;
   registro_universitario: string;
   direccion: string;
+  codigo_docente: string;
   aceptaTerminos: boolean;
 }
 
@@ -64,8 +66,27 @@ export const RegisterPage: React.FC = () => {
     ci: '',
     registro_universitario: '',
     direccion: '',
+    codigo_docente: '',
     aceptaTerminos: false,
   });
+
+  const limpiarFormulario = () => {
+    setFormData({
+      nombre: '',
+      apellido: '',
+      usuario: '',
+      tipo_usuario: '',
+      correo: '',
+      telefono: '',
+      password: '',
+      cargo: '',
+      ci: '',
+      registro_universitario: '',
+      direccion: '',
+      codigo_docente: '',
+      aceptaTerminos: false,
+    });
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -140,6 +161,7 @@ export const RegisterPage: React.FC = () => {
         tipo: 'warning',
         mensaje: 'Revisa los campos marcados antes de continuar.',
       });
+
       return false;
     }
 
@@ -175,6 +197,15 @@ export const RegisterPage: React.FC = () => {
       }
     }
 
+    if (formData.tipo_usuario === 'tutor') {
+      if (!formData.codigo_docente.trim()) {
+        nuevosErrores.codigo_docente = 'El código docente es obligatorio.';
+      } else if (formData.codigo_docente.trim().length < 3) {
+        nuevosErrores.codigo_docente =
+          'El código docente debe tener al menos 3 caracteres.';
+      }
+    }
+
     if (!formData.aceptaTerminos) {
       nuevosErrores.aceptaTerminos =
         'Debes aceptar los términos y condiciones.';
@@ -187,6 +218,7 @@ export const RegisterPage: React.FC = () => {
         tipo: 'warning',
         mensaje: 'Completa correctamente los datos adicionales.',
       });
+
       return false;
     }
 
@@ -232,6 +264,7 @@ export const RegisterPage: React.FC = () => {
         tipo: 'error',
         mensaje: 'No se encontró VITE_API_URL en el archivo .env del frontend.',
       });
+
       return;
     }
 
@@ -258,6 +291,10 @@ export const RegisterPage: React.FC = () => {
       payload.cargo = formData.cargo.trim();
     }
 
+    if (formData.tipo_usuario === 'tutor') {
+      payload.codigo_docente = formData.codigo_docente.trim();
+    }
+    console.log(payload)
     try {
       const response = await fetch(`${API_URL}/RegistrarUsuario`, {
         method: 'POST',
@@ -290,21 +327,7 @@ export const RegisterPage: React.FC = () => {
         mensaje: 'Usuario registrado correctamente. Ahora puedes iniciar sesión.',
       });
 
-      setFormData({
-        nombre: '',
-        apellido: '',
-        usuario: '',
-        tipo_usuario: '',
-        correo: '',
-        telefono: '',
-        password: '',
-        cargo: '',
-        ci: '',
-        registro_universitario: '',
-        direccion: '',
-        aceptaTerminos: false,
-      });
-
+      limpiarFormulario();
       setErrores({});
       setStep(1);
 
@@ -323,17 +346,35 @@ export const RegisterPage: React.FC = () => {
   };
 
   const inputClass = (campo: keyof RegisterFormData) => {
-    return `w-full pl-10 pr-4 py-2.5 bg-light-gray/30 border rounded-xl focus:bg-white-main outline-none transition-colors ${errores[campo]
+    return `w-full pl-10 pr-4 py-2.5 bg-light-gray/30 border rounded-xl focus:bg-white-main outline-none transition-colors ${
+      errores[campo]
         ? 'border-red-400 focus:border-red-500'
         : 'border-medium-gray/20 focus:border-main-green'
-      }`;
+    }`;
   };
 
   const simpleInputClass = (campo: keyof RegisterFormData) => {
-    return `w-full px-4 py-2.5 bg-light-gray/30 border rounded-xl focus:bg-white-main outline-none transition-colors appearance-none cursor-pointer ${errores[campo]
+    return `w-full px-4 py-2.5 bg-light-gray/30 border rounded-xl focus:bg-white-main outline-none transition-colors appearance-none cursor-pointer ${
+      errores[campo]
         ? 'border-red-400 focus:border-red-500'
         : 'border-medium-gray/20 focus:border-main-green'
-      }`;
+    }`;
+  };
+
+  const textoAyudaPaso2 = () => {
+    if (formData.tipo_usuario === 'gerente') {
+      return 'Completa el cargo que ocuparás dentro de la empresa.';
+    }
+
+    if (formData.tipo_usuario === 'pasante') {
+      return 'Completa tus datos académicos y personales como pasante.';
+    }
+
+    if (formData.tipo_usuario === 'tutor') {
+      return 'Completa tu código docente para identificar tu perfil de tutor.';
+    }
+
+    return 'Completa los datos adicionales.';
   };
 
   return (
@@ -344,9 +385,11 @@ export const RegisterPage: React.FC = () => {
         <div className="bg-white-main w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden border border-medium-gray/20 flex flex-col md:flex-row">
           <div className="md:w-1/3 bg-main-green p-8 text-white-main flex flex-col justify-center space-y-4">
             <CheckCircle2 size={48} />
+
             <h2 className="text-2xl font-montserrat font-bold">
               Únete a la Red
             </h2>
+
             <p className="text-sm opacity-90 leading-relaxed">
               Forma parte del ecosistema que conecta el talento académico con el
               mundo profesional.
@@ -354,13 +397,16 @@ export const RegisterPage: React.FC = () => {
 
             <div className="pt-8 flex gap-2">
               <div
-                className={`h-1.5 flex-1 rounded-full ${step >= 1 ? 'bg-white-main' : 'bg-white-main/30'
-                  }`}
-              ></div>
+                className={`h-1.5 flex-1 rounded-full ${
+                  step >= 1 ? 'bg-white-main' : 'bg-white-main/30'
+                }`}
+              />
+
               <div
-                className={`h-1.5 flex-1 rounded-full ${step >= 2 ? 'bg-white-main' : 'bg-white-main/30'
-                  }`}
-              ></div>
+                className={`h-1.5 flex-1 rounded-full ${
+                  step >= 2 ? 'bg-white-main' : 'bg-white-main/30'
+                }`}
+              />
             </div>
           </div>
 
@@ -370,9 +416,17 @@ export const RegisterPage: React.FC = () => {
             className="md:w-2/3 p-8 space-y-5"
           >
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-2xl font-bold text-institucional-blue font-montserrat">
-                {step === 1 ? 'Crear Cuenta' : 'Datos Adicionales'}
-              </h3>
+              <div>
+                <h3 className="text-2xl font-bold text-institucional-blue font-montserrat">
+                  {step === 1 ? 'Crear Cuenta' : 'Datos Adicionales'}
+                </h3>
+
+                {step === 2 && (
+                  <p className="text-xs text-medium-gray mt-1">
+                    {textoAyudaPaso2()}
+                  </p>
+                )}
+              </div>
 
               <span className="text-xs font-bold text-medium-gray bg-light-gray px-2 py-1 rounded-md">
                 Paso {step} de 2
@@ -390,6 +444,7 @@ export const RegisterPage: React.FC = () => {
                         className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
                         size={18}
                       />
+
                       <input
                         type="text"
                         name="nombre"
@@ -407,6 +462,7 @@ export const RegisterPage: React.FC = () => {
                         className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
                         size={18}
                       />
+
                       <input
                         type="text"
                         name="apellido"
@@ -426,6 +482,7 @@ export const RegisterPage: React.FC = () => {
                         className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
                         size={18}
                       />
+
                       <input
                         type="text"
                         name="usuario"
@@ -450,8 +507,10 @@ export const RegisterPage: React.FC = () => {
                       <option value="" disabled>
                         Selecciona un rol...
                       </option>
+
                       <option value="pasante">Pasante</option>
                       <option value="gerente">Gerente de Empresa</option>
+                      <option value="tutor">Tutor</option>
                     </select>
                   </CampoError>
                 </div>
@@ -463,6 +522,7 @@ export const RegisterPage: React.FC = () => {
                         className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
                         size={18}
                       />
+
                       <input
                         type="email"
                         name="correo"
@@ -480,6 +540,7 @@ export const RegisterPage: React.FC = () => {
                         className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
                         size={18}
                       />
+
                       <input
                         type="tel"
                         name="telefono"
@@ -498,6 +559,7 @@ export const RegisterPage: React.FC = () => {
                       className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
                       size={18}
                     />
+
                     <input
                       type="password"
                       name="password"
@@ -532,6 +594,7 @@ export const RegisterPage: React.FC = () => {
                           className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
                           size={18}
                         />
+
                         <input
                           type="text"
                           name="cargo"
@@ -557,6 +620,7 @@ export const RegisterPage: React.FC = () => {
                             className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
                             size={18}
                           />
+
                           <input
                             type="text"
                             name="ci"
@@ -577,6 +641,7 @@ export const RegisterPage: React.FC = () => {
                             className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
                             size={18}
                           />
+
                           <input
                             type="text"
                             name="registro_universitario"
@@ -598,6 +663,7 @@ export const RegisterPage: React.FC = () => {
                           className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
                           size={18}
                         />
+
                         <input
                           type="text"
                           name="direccion"
@@ -611,6 +677,36 @@ export const RegisterPage: React.FC = () => {
                   </div>
                 )}
 
+                {formData.tipo_usuario === 'tutor' && (
+                  <div className="space-y-4">
+                    <CampoError
+                      label="Código Docente"
+                      error={errores.codigo_docente}
+                    >
+                      <div className="relative group">
+                        <BookUser
+                          className="absolute left-3 top-2.5 text-medium-gray group-focus-within:text-main-green"
+                          size={18}
+                        />
+
+                        <input
+                          type="text"
+                          name="codigo_docente"
+                          value={formData.codigo_docente}
+                          onChange={handleChange}
+                          className={inputClass('codigo_docente')}
+                          placeholder="Ej: DOC-001"
+                        />
+                      </div>
+                    </CampoError>
+
+                    <div className="bg-institucional-blue/10 border border-institucional-blue/20 text-institucional-blue rounded-xl px-4 py-3 text-xs font-semibold">
+                      El código docente servirá para identificar tu perfil como
+                      tutor dentro del sistema.
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <div className="flex items-center gap-2 pt-4">
                     <input
@@ -621,6 +717,7 @@ export const RegisterPage: React.FC = () => {
                       className="w-4 h-4 rounded text-main-green focus:ring-main-green cursor-pointer"
                       id="terms"
                     />
+
                     <label
                       htmlFor="terms"
                       className="text-xs text-dark-gray cursor-pointer"
@@ -713,6 +810,7 @@ const AvisoTailwind: React.FC<{ aviso: Aviso }> = ({ aviso }) => {
       className={`border px-4 py-3 rounded-xl text-sm flex gap-2 items-start ${estilos[aviso.tipo]}`}
     >
       <Icon size={18} className="mt-0.5 shrink-0" />
+
       <p>{aviso.mensaje}</p>
     </div>
   );

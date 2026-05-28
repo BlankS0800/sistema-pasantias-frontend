@@ -15,6 +15,30 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
+  const redirigirPorRol = (abreviacionRol?: string) => {
+    if (abreviacionRol === 'GER_EMP') {
+      navigate('/gerente/dashboard', { replace: true });
+      return;
+    }
+
+    if (abreviacionRol === 'PAS') {
+      navigate('/pasante/dashboard', { replace: true });
+      return;
+    }
+
+    if (abreviacionRol === 'ENC_PAS') {
+      navigate('/jefe/dashboard', { replace: true });
+      return;
+    }
+
+    if (abreviacionRol === 'TUT' || abreviacionRol === 'TUTOR') {
+      navigate('/tutor/dashboard', { replace: true });
+      return;
+    }
+
+    navigate('/', { replace: true });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -23,7 +47,7 @@ export const LoginPage: React.FC = () => {
 
     try {
       const data = await login({
-        email: email,
+        email,
         contrasena: password,
       });
 
@@ -32,18 +56,7 @@ export const LoginPage: React.FC = () => {
         return;
       }
 
-      const abreviacionRol = data.usuario?.rol?.abreviacion;
-
-      if (abreviacionRol === 'GER_EMP') {
-        navigate('/gerente/dashboard', { replace: true });
-      } else if (abreviacionRol === 'PAS') {
-        navigate('/pasante/dashboard', { replace: true });
-      } else if (abreviacionRol === 'ENC_PAS') {
-        navigate('/jefe/dashboard', { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
-
+      redirigirPorRol(data.usuario?.rol?.abreviacion);
     } catch (error: any) {
       setError(error.message || 'No se pudo iniciar sesión.');
     } finally {
@@ -57,18 +70,17 @@ export const LoginPage: React.FC = () => {
 
       <main className="flex-grow flex items-center justify-center px-6 py-12">
         <div className="bg-white-main w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-medium-gray/20">
-
           <div className="bg-institucional-blue p-8 text-center text-white-main">
             <h2 className="text-3xl font-montserrat font-bold mb-2">
               Bienvenido
             </h2>
+
             <p className="opacity-80 text-sm">
               Ingresa tus credenciales para acceder
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
-
             {error && (
               <div className="bg-red-100 text-red-700 text-sm px-4 py-3 rounded-xl">
                 {error}
@@ -127,7 +139,10 @@ export const LoginPage: React.FC = () => {
               </div>
 
               <div className="text-right">
-                <a href="#" className="text-xs text-secondary-blue hover:underline font-medium">
+                <a
+                  href="#"
+                  className="text-xs text-secondary-blue hover:underline font-medium"
+                >
                   ¿Olvidaste tu contraseña?
                 </a>
               </div>
@@ -142,15 +157,27 @@ export const LoginPage: React.FC = () => {
               <ArrowRight size={20} />
             </button>
 
-            <div className="pt-4 text-center">
+            <div className="pt-4 text-center space-y-2">
               <p className="text-sm text-dark-gray">
                 ¿No tienes una cuenta?{' '}
-                <a href="/registro" className="text-main-green font-bold hover:underline">
+                <a
+                  href="/registro"
+                  className="text-main-green font-bold hover:underline"
+                >
                   Regístrate aquí
                 </a>
               </p>
-            </div>
 
+              <p className="text-sm text-dark-gray">
+                ¿Eres tutor?{' '}
+                <a
+                  href="/registro/tutor"
+                  className="text-secondary-blue font-bold hover:underline"
+                >
+                  Registro de tutor
+                </a>
+              </p>
+            </div>
           </form>
         </div>
       </main>
