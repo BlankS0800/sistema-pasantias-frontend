@@ -1,28 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { ModuloTemporal } from '../components/pasante/ModuloTemporal';
-import { DashboardView } from '../components/pasante/DashboardView';
-import { PerfilView } from '../components/pasante/PerfilView';
-import { SeguimientoView } from '../components/pasante/SeguimientoView';
-import { ExplorarView } from '../components/pasante/ExplorarView';
-import { BoletaView } from '../components/pasante/BoletaView';
-import { Sidebar } from '../components/pasante/Sidebar';
-import { Header } from '../components/pasante/Header';
-import { CertificadosView } from '../components/pasante/CertificadosView';
+import { TutorSidebar } from '../components/tutor/TutorSidebar';
+import { TutorHeader } from '../components/tutor/TutorHeader';
+import { TutorPasantesPanel } from '../components/tutor/TutorPasantesPanel';
 
-type InternModule =
-  | 'dashboard'
-  | 'perfil'
-  | 'explorar'
-  | 'mis-postulaciones'
-  | 'seguimiento'
-  | 'certificados';
+type TutorModule = 'pasantes';
 
-export const InternDashboard: React.FC = () => {
+export const TutorDashboard: React.FC = () => {
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<InternModule>('dashboard');
+  const [activeTab, setActiveTab] = useState<TutorModule>('pasantes');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [verificandoSesion, setVerificandoSesion] = useState(true);
@@ -52,7 +40,9 @@ export const InternDashboard: React.FC = () => {
         return;
       }
 
-      if (usuarioParseado?.rol?.abreviacion !== 'PAS') {
+      const rol = usuarioParseado?.rol?.abreviacion;
+
+      if (rol !== 'TUT' && rol !== 'TUTOR') {
         navigate('/', { replace: true });
         return;
       }
@@ -91,31 +81,9 @@ export const InternDashboard: React.FC = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard':
-        return <DashboardView usuario={usuario} />;
-
-      case 'perfil':
-        return <PerfilView usuario={usuario} />;
-
-      case 'explorar':
-        return <ExplorarView />;
-
-      case 'mis-postulaciones':
-        return <BoletaView />;
-
-      case 'seguimiento':
-        return <SeguimientoView />;
-
-      case 'certificados':
-        return <CertificadosView />;
-
+      case 'pasantes':
       default:
-        return (
-          <ModuloTemporal
-            titulo="En construcción"
-            descripcion="Pronto estará disponible."
-          />
-        );
+        return <TutorPasantesPanel />;
     }
   };
 
@@ -131,7 +99,7 @@ export const InternDashboard: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-light-gray font-poppins overflow-hidden">
-      <Sidebar
+      <TutorSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isMobileMenuOpen={isMobileMenuOpen}
@@ -141,7 +109,11 @@ export const InternDashboard: React.FC = () => {
       />
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <Header usuario={usuario} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+        <TutorHeader
+          usuario={usuario}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+          setActiveTab={setActiveTab}
+        />
 
         <div className="flex-1 overflow-y-auto p-6 md:p-10">
           {renderContent()}

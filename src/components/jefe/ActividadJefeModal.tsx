@@ -1,372 +1,323 @@
 import React, { useEffect, useState } from 'react';
-import {
-    X,
-    Save,
-    FileText,
-    Calendar,
-    Briefcase,
-    AlignLeft,
-} from 'lucide-react';
+import { AlertCircle, Save, UserCircle, X } from 'lucide-react';
+
+import { listarPasantesAprobadosPorPasantia } from '../../services/actividadJefeService';
 
 import type {
-    ActividadJefe,
-    ActividadPayload,
-    PasantiaAsignada,
+  ActividadColor,
+  ActividadJefe,
+  ActividadPayload,
+  PasanteAprobado,
+  PasantiaAsignada,
 } from '../../services/actividadJefeService';
 
 interface ActividadJefeModalProps {
-    abierto: boolean;
-    modo: 'crear' | 'editar';
-    actividadInicial?: ActividadJefe | null;
-    pasantias: PasantiaAsignada[];
-    idPasantiaSeleccionada?: number | null;
-    fechaSeleccionada?: string | null;
-    cargando?: boolean;
-    onClose: () => void;
-    onSubmit: (payload: ActividadPayload) => void;
+  abierto: boolean;
+  modo: 'crear' | 'editar';
+  actividadInicial: ActividadJefe | null;
+  pasantias: PasantiaAsignada[];
+  idPasantiaSeleccionada: number;
+  fechaSeleccionada: string | null;
+  cargando: boolean;
+  onClose: () => void;
+  onSubmit: (payload: ActividadPayload) => void;
 }
 
-interface FormDataActividad {
-    titulo: string;
-    descripcion: string;
-    fecha_inicio: string;
-    fecha_fin: string;
-    id_pasantia: string;
-}
-
-type ErroresActividad = Partial<Record<keyof FormDataActividad, string>>;
+const colores: Array<{ value: ActividadColor; label: string; clase: string }> = [
+  { value: 'verde', label: 'Verde', clase: 'bg-main-green' },
+  { value: 'azul', label: 'Azul', clase: 'bg-institucional-blue' },
+  { value: 'morado', label: 'Morado', clase: 'bg-purple-600' },
+  { value: 'naranja', label: 'Naranja', clase: 'bg-orange-500' },
+  { value: 'rojo', label: 'Rojo', clase: 'bg-red-600' },
+];
 
 export const ActividadJefeModal: React.FC<ActividadJefeModalProps> = ({
-    abierto,
-    modo,
-    actividadInicial,
-    pasantias,
-    idPasantiaSeleccionada,
-    fechaSeleccionada,
-    cargando = false,
-    onClose,
-    onSubmit,
+  abierto,
+  modo,
+  actividadInicial,
+  pasantias,
+  idPasantiaSeleccionada,
+  fechaSeleccionada,
+  cargando,
+  onClose,
+  onSubmit,
 }) => {
-    const [formData, setFormData] = useState<FormDataActividad>({
-        titulo: '',
-        descripcion: '',
-        fecha_inicio: '',
-        fecha_fin: '',
-        id_pasantia: '',
+  const [form, setForm] = useState<ActividadPayload>({
+    titulo: '',
+    descripcion: '',
+    fecha_inicio: '',
+    fecha_fin: '',
+    id_pasantia: idPasantiaSeleccionada,
+    id_pasante: null,
+    color: 'verde',
+  });
+
+  const [pasantes, setPasantes] = useState<PasanteAprobado[]>([]);
+  const [cargandoPasantes, setCargandoPasantes] = useState(false);
+  const [errorPasantes, setErrorPasantes] = useState('');
+
+  useEffect(() => {
+    if (!abierto) return;
+
+    if (modo === 'editar' && actividadInicial) {
+      setForm({
+        titulo: actividadInicial.titulo || '',
+        descripcion: actividadInicial.descripcion || '',
+        fecha_inicio: actividadInicial.fecha_inicio?.substring(0, 10) || '',
+        fecha_fin: actividadInicial.fecha_fin?.substring(0, 10) || '',
+        id_pasantia: actividadInicial.id_pasantia,
+        id_pasante: actividadInicial.id_pasante || null,
+        color: actividadInicial.color || 'verde',
+      });
+      return;
+    }
+
+    setForm({
+      titulo: '',
+      descripcion: '',
+      fecha_inicio: fechaSeleccionada || '',
+      fecha_fin: fechaSeleccionada || '',
+      id_pasantia: idPasantiaSeleccionada,
+      id_pasante: null,
+      color: 'verde',
     });
+  }, [abierto, modo, actividadInicial, fechaSeleccionada, idPasantiaSeleccionada]);
 
-    const [errores, setErrores] = useState<ErroresActividad>({});
+  useEffect(() => {
+    if (!abierto || !form.id_pasantia) return;
 
-    useEffect(() => {
-        if (abierto) {
-            setFormData({
-                titulo: actividadInicial?.titulo || '',
-                descripcion: actividadInicial?.descripcion || '',
-                fecha_inicio: actividadInicial?.fecha_inicio
-                    ? actividadInicial.fecha_inicio.substring(0, 10)
-                    : fechaSeleccionada || '',
-                fecha_fin: actividadInicial?.fecha_fin
-                    ? actividadInicial.fecha_fin.substring(0, 10)
-                    : fechaSeleccionada || '',
-                id_pasantia: actividadInicial?.id_pasantia
-                    ? String(actividadInicial.id_pasantia)
-                    : idPasantiaSeleccionada
-                        ? String(idPasantiaSeleccionada)
-                        : '',
-            });
+    cargarPasantes(form.id_pasantia);
+  }, [abierto, form.id_pasantia]);
 
-            setErrores({});
-        }
-    }, [abierto, actividadInicial, fechaSeleccionada, idPasantiaSeleccionada]);
+  const cargarPasantes = async (id_pasantia: number) => {
+    setCargandoPasantes(true);
+    setErrorPasantes('');
 
-    if (!abierto) return null;
+    try {
+      const data = await listarPasantesAprobadosPorPasantia(id_pasantia);
+      setPasantes(data.pasantes || []);
+    } catch (error: any) {
+      setPasantes([]);
+      setErrorPasantes(error.message || 'No se pudieron cargar los pasantes aprobados.');
+    } finally {
+      setCargandoPasantes(false);
+    }
+  };
 
-    const pasantiaSeleccionada = pasantias.find(
-        (pasantia) => String(pasantia.id_pasantia) === formData.id_pasantia
-    );
+  const nombrePasante = (pasante: PasanteAprobado) => {
+    const usuario = pasante.usuario;
 
-    const handleChange = (
-        e: React.ChangeEvent<
-            HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-        >
-    ) => {
-        const { name, value } = e.target;
+    if (!usuario) return `Pasante #${pasante.id_pasante}`;
 
-        setFormData({
-            ...formData,
-            [name]: value,
-        });
+    return `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim() || `Pasante #${pasante.id_pasante}`;
+  };
 
-        setErrores({
-            ...errores,
-            [name]: '',
-        });
-    };
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
 
-    const validar = () => {
-        const nuevosErrores: ErroresActividad = {};
+    onSubmit({
+      ...form,
+      id_pasante: form.id_pasante || null,
+    });
+  };
 
-        if (!formData.titulo.trim()) {
-            nuevosErrores.titulo = 'El título es obligatorio.';
-        } else if (formData.titulo.trim().length < 3) {
-            nuevosErrores.titulo = 'El título debe tener al menos 3 caracteres.';
-        }
+  if (!abierto) return null;
 
-        if (!formData.descripcion.trim()) {
-            nuevosErrores.descripcion = 'La descripción es obligatoria.';
-        }
+  return (
+    <div className="fixed inset-0 bg-dark-gray/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+      <div className="bg-white-main w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+        <div className="p-5 border-b border-light-gray bg-institucional-blue text-white-main flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-bold">
+              {modo === 'crear' ? 'Crear actividad' : 'Editar actividad'}
+            </h3>
+            <p className="text-xs opacity-90">
+              Puedes crearla sin pasante y asignarlo después.
+            </p>
+          </div>
 
-        if (!formData.id_pasantia) {
-            nuevosErrores.id_pasantia = 'Selecciona una pasantía.';
-        }
-
-        if (!formData.fecha_inicio) {
-            nuevosErrores.fecha_inicio = 'La fecha de inicio es obligatoria.';
-        }
-
-        if (!formData.fecha_fin) {
-            nuevosErrores.fecha_fin = 'La fecha de fin es obligatoria.';
-        }
-
-        if (
-            formData.fecha_inicio &&
-            formData.fecha_fin &&
-            formData.fecha_fin < formData.fecha_inicio
-        ) {
-            nuevosErrores.fecha_fin =
-                'La fecha de fin no puede ser menor a la fecha de inicio.';
-        }
-
-        if (pasantiaSeleccionada && formData.fecha_inicio) {
-            const inicioPasantia = pasantiaSeleccionada.fecha_inicio.substring(0, 10);
-            const finPasantia = pasantiaSeleccionada.fecha_fin.substring(0, 10);
-
-            if (
-                formData.fecha_inicio < inicioPasantia ||
-                formData.fecha_inicio > finPasantia
-            ) {
-                nuevosErrores.fecha_inicio =
-                    'La fecha debe estar dentro del periodo de la pasantía.';
-            }
-
-            if (formData.fecha_fin < inicioPasantia || formData.fecha_fin > finPasantia) {
-                nuevosErrores.fecha_fin =
-                    'La fecha debe estar dentro del periodo de la pasantía.';
-            }
-        }
-
-        setErrores(nuevosErrores);
-
-        return Object.keys(nuevosErrores).length === 0;
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!validar()) return;
-
-        onSubmit({
-            titulo: formData.titulo.trim(),
-            descripcion: formData.descripcion.trim(),
-            fecha_inicio: formData.fecha_inicio,
-            fecha_fin: formData.fecha_fin,
-            id_pasantia: Number(formData.id_pasantia),
-        });
-    };
-
-    const inputClass = (campo: keyof FormDataActividad) => {
-        return `w-full pl-10 pr-4 py-3 bg-light-gray/40 border rounded-xl focus:bg-white-main outline-none transition-colors ${errores[campo]
-                ? 'border-red-400 focus:border-red-500'
-                : 'border-medium-gray/20 focus:border-main-green'
-            }`;
-    };
-
-    const textAreaClass = (campo: keyof FormDataActividad) => {
-        return `w-full px-4 py-3 bg-light-gray/40 border rounded-xl focus:bg-white-main outline-none transition-colors min-h-28 resize-none ${errores[campo]
-                ? 'border-red-400 focus:border-red-500'
-                : 'border-medium-gray/20 focus:border-main-green'
-            }`;
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
-            <div className="bg-white-main w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden">
-                <div className="bg-institucional-blue text-white-main px-6 py-5 flex items-center justify-between">
-                    <div>
-                        <h3 className="font-montserrat font-bold text-xl">
-                            {modo === 'crear' ? 'Agregar Actividad' : 'Editar Actividad'}
-                        </h3>
-                        <p className="text-sm opacity-80">
-                            Registra la actividad dentro de una pasantía asignada.
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        disabled={cargando}
-                        className="p-2 hover:bg-white-main/10 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                        <X size={22} />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    <CampoActividad label="Pasantía" error={errores.id_pasantia}>
-                        <div className="relative">
-                            <Briefcase
-                                className="absolute left-3 top-3.5 text-medium-gray"
-                                size={20}
-                            />
-
-                            <select
-                                name="id_pasantia"
-                                value={formData.id_pasantia}
-                                onChange={handleChange}
-                                className={inputClass('id_pasantia')}
-                            >
-                                <option value="">Selecciona una pasantía...</option>
-
-                                {pasantias.map((pasantia) => (
-                                    <option
-                                        key={pasantia.id_pasantia}
-                                        value={pasantia.id_pasantia}
-                                    >
-                                        {pasantia.nombre}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </CampoActividad>
-
-                    {pasantiaSeleccionada && (
-                        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-xl text-sm">
-                            Periodo permitido:{' '}
-                            <strong>{pasantiaSeleccionada.fecha_inicio}</strong> hasta{' '}
-                            <strong>{pasantiaSeleccionada.fecha_fin}</strong>
-                        </div>
-                    )}
-
-                    <CampoActividad label="Título" error={errores.titulo}>
-                        <div className="relative">
-                            <FileText
-                                className="absolute left-3 top-3.5 text-medium-gray"
-                                size={20}
-                            />
-
-                            <input
-                                type="text"
-                                name="titulo"
-                                value={formData.titulo}
-                                onChange={handleChange}
-                                className={inputClass('titulo')}
-                                placeholder="Ej: Inducción inicial"
-                            />
-                        </div>
-                    </CampoActividad>
-
-                    <CampoActividad label="Descripción" error={errores.descripcion}>
-                        <div className="relative">
-                            <AlignLeft
-                                className="absolute left-3 top-3.5 text-medium-gray"
-                                size={20}
-                            />
-
-                            <textarea
-                                name="descripcion"
-                                value={formData.descripcion}
-                                onChange={handleChange}
-                                className={`${textAreaClass('descripcion')} pl-10`}
-                                placeholder="Describe la actividad que deberá realizarse..."
-                            />
-                        </div>
-                    </CampoActividad>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <CampoActividad label="Fecha de inicio" error={errores.fecha_inicio}>
-                            <div className="relative">
-                                <Calendar
-                                    className="absolute left-3 top-3.5 text-medium-gray"
-                                    size={20}
-                                />
-
-                                <input
-                                    type="date"
-                                    name="fecha_inicio"
-                                    value={formData.fecha_inicio}
-                                    onChange={handleChange}
-                                    className={inputClass('fecha_inicio')}
-                                />
-                            </div>
-                        </CampoActividad>
-
-                        <CampoActividad label="Fecha de fin" error={errores.fecha_fin}>
-                            <div className="relative">
-                                <Calendar
-                                    className="absolute left-3 top-3.5 text-medium-gray"
-                                    size={20}
-                                />
-
-                                <input
-                                    type="date"
-                                    name="fecha_fin"
-                                    value={formData.fecha_fin}
-                                    onChange={handleChange}
-                                    className={inputClass('fecha_fin')}
-                                />
-                            </div>
-                        </CampoActividad>
-                    </div>
-
-                    <div className="flex gap-3 pt-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            disabled={cargando}
-                            className="w-1/3 bg-light-gray hover:bg-medium-gray/20 text-dark-gray font-bold py-3 rounded-xl transition-colors disabled:opacity-60"
-                        >
-                            Cancelar
-                        </button>
-
-                        <button
-                            type="submit"
-                            disabled={cargando}
-                            className="w-2/3 bg-main-green hover:bg-soft-green text-white-main font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
-                        >
-                            <Save size={19} />
-                            {cargando
-                                ? 'Guardando...'
-                                : modo === 'crear'
-                                    ? 'Registrar Actividad'
-                                    : 'Guardar Cambios'}
-                        </button>
-                    </div>
-                </form>
-            </div>
+          <button type="button" onClick={onClose} className="hover:text-red-300 transition-colors">
+            <X size={24} />
+          </button>
         </div>
-    );
-};
 
-interface CampoActividadProps {
-    label: string;
-    error?: string;
-    children: React.ReactNode;
-}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
+          <div>
+            <label className="text-xs font-bold text-dark-gray uppercase tracking-wider">
+              Pasantía
+            </label>
+            <select
+              value={form.id_pasantia}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  id_pasantia: Number(e.target.value),
+                  id_pasante: null,
+                })
+              }
+              className="mt-2 w-full px-4 py-2 bg-light-gray/30 border border-medium-gray/20 rounded-lg focus:border-main-green outline-none"
+            >
+              {pasantias.map((pasantia) => (
+                <option key={pasantia.id_pasantia} value={pasantia.id_pasantia}>
+                  {pasantia.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
 
-const CampoActividad: React.FC<CampoActividadProps> = ({
-    label,
-    error,
-    children,
-}) => {
-    return (
-        <div className="space-y-2">
-            <label className="text-xs font-bold text-dark-gray uppercase tracking-wider ml-1">
-                {label}
+          <div>
+            <label className="text-xs font-bold text-dark-gray uppercase tracking-wider">
+              Pasante asignado
             </label>
 
-            {children}
+            <select
+              value={form.id_pasante || ''}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  id_pasante: e.target.value ? Number(e.target.value) : null,
+                })
+              }
+              className="mt-2 w-full px-4 py-2 bg-light-gray/30 border border-medium-gray/20 rounded-lg focus:border-main-green outline-none"
+              disabled={cargandoPasantes}
+            >
+              <option value="">Sin asignar por ahora</option>
+              {pasantes.map((pasante) => (
+                <option key={pasante.id_pasante} value={pasante.id_pasante}>
+                  {nombrePasante(pasante)} {pasante.reg_universitario ? `- ${pasante.reg_universitario}` : ''}
+                </option>
+              ))}
+            </select>
 
-            {error && <p className="text-xs text-red-600 ml-1">{error}</p>}
-        </div>
-    );
+            {cargandoPasantes && (
+              <p className="text-xs text-medium-gray mt-2">Cargando pasantes aprobados...</p>
+            )}
+
+            {!cargandoPasantes && pasantes.length === 0 && (
+              <div className="mt-2 flex items-start gap-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg px-3 py-2 text-xs">
+                <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                <span>
+                  Todavía no hay pasantes aprobados en esta pasantía. Puedes guardar la actividad sin asignar y editarla después.
+                </span>
+              </div>
+            )}
+
+            {errorPasantes && (
+              <p className="text-xs text-red-600 mt-2">{errorPasantes}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-dark-gray uppercase tracking-wider">
+              Título
+            </label>
+            <input
+              type="text"
+              value={form.titulo}
+              onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+              className="mt-2 w-full px-4 py-2 bg-light-gray/30 border border-medium-gray/20 rounded-lg focus:border-main-green outline-none"
+              placeholder="Ej: Revisión de inventario"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-dark-gray uppercase tracking-wider">
+              Descripción
+            </label>
+            <textarea
+              value={form.descripcion}
+              onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+              className="mt-2 w-full px-4 py-3 bg-light-gray/30 border border-medium-gray/20 rounded-lg focus:border-main-green outline-none min-h-[110px] resize-y"
+              placeholder="Describe qué debe realizar el pasante..."
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-dark-gray uppercase tracking-wider">
+                Fecha inicio
+              </label>
+              <input
+                type="date"
+                value={form.fecha_inicio}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    fecha_inicio: e.target.value,
+                    fecha_fin: form.fecha_fin || e.target.value,
+                  })
+                }
+                className="mt-2 w-full px-4 py-2 bg-light-gray/30 border border-medium-gray/20 rounded-lg focus:border-main-green outline-none"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-dark-gray uppercase tracking-wider">
+                Fecha fin
+              </label>
+              <input
+                type="date"
+                value={form.fecha_fin}
+                onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
+                className="mt-2 w-full px-4 py-2 bg-light-gray/30 border border-medium-gray/20 rounded-lg focus:border-main-green outline-none"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-dark-gray uppercase tracking-wider">
+              Color en calendario
+            </label>
+            <div className="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
+              {colores.map((color) => (
+                <button
+                  key={color.value}
+                  type="button"
+                  onClick={() => setForm({ ...form, color: color.value })}
+                  className={`border rounded-xl px-3 py-2 text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                    form.color === color.value
+                      ? 'border-institucional-blue ring-2 ring-institucional-blue/20'
+                      : 'border-light-gray hover:border-medium-gray'
+                  }`}
+                >
+                  <span className={`w-3 h-3 rounded-full ${color.clase}`} />
+                  {color.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {form.id_pasante && (
+            <div className="bg-main-green/10 border border-main-green/30 rounded-xl px-4 py-3 text-sm text-main-green flex gap-2 items-center">
+              <UserCircle size={18} />
+              Esta actividad quedará asignada al pasante seleccionado.
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-light-gray">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 rounded-lg text-sm font-bold text-dark-gray bg-light-gray hover:bg-medium-gray/20"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="submit"
+              disabled={cargando}
+              className="bg-main-green hover:bg-soft-green text-white-main px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-60"
+            >
+              <Save size={17} />
+              {cargando ? 'Guardando...' : modo === 'crear' ? 'Guardar actividad' : 'Actualizar actividad'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };

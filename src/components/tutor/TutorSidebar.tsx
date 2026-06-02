@@ -1,26 +1,17 @@
 import React from 'react';
-import {
-  LayoutDashboard,
-  UserCircle,
-  Search,
-  FileCheck,
-  ListTodo,
-  Award,
-  LogOut,
-  X,
-} from 'lucide-react';
+import { LogOut, UserRoundCheck, X } from 'lucide-react';
 import logoIcon from '../../assets/logo_icon.png';
 
-interface SidebarProps {
+interface TutorSidebarProps {
   activeTab: string;
-  setActiveTab: (tab: any) => void;
+  setActiveTab: (tab: 'pasantes') => void;
   isMobileMenuOpen: boolean;
-  setIsMobileMenuOpen: (val: boolean) => void;
+  setIsMobileMenuOpen: (value: boolean) => void;
   handleLogout: () => void;
   cerrandoSesion: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
+export const TutorSidebar: React.FC<TutorSidebarProps> = ({
   activeTab,
   setActiveTab,
   isMobileMenuOpen,
@@ -29,12 +20,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   cerrandoSesion,
 }) => {
   const navItems = [
-    { id: 'dashboard', label: 'Mi Dashboard', icon: LayoutDashboard },
-    { id: 'perfil', label: 'Mi Perfil y CV', icon: UserCircle },
-    { id: 'explorar', label: 'Buscar Pasantías', icon: Search },
-    { id: 'mis-postulaciones', label: 'Boleta e Inscripción', icon: FileCheck },
-    { id: 'seguimiento', label: 'Actividades y Bitácora', icon: ListTodo },
-    { id: 'certificados', label: 'Certificados', icon: Award },
+    {
+      id: 'pasantes' as const,
+      label: 'Mis Pasantes',
+      icon: UserRoundCheck,
+    },
   ];
 
   return (
@@ -52,7 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
 
           <span className="font-montserrat font-bold text-lg tracking-wide">
-            Pasante
+            Tutor
           </span>
         </div>
 

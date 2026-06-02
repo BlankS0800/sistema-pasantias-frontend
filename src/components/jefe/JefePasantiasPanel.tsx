@@ -9,6 +9,7 @@ import {
     FileText,
     Plus,
     Trash2,
+    UserCircle,
 } from 'lucide-react';
 
 import {
@@ -127,6 +128,7 @@ export const JefePasantiasPanel: React.FC = () => {
                         return {
                             ...pasantia,
                             actividades: [...actividadesActuales, data.actividad],
+                            actividades_count: (pasantia.actividades_count || 0) + 1,
                         };
                     }
 
@@ -153,7 +155,7 @@ export const JefePasantiasPanel: React.FC = () => {
                         : 'Actividad actualizada correctamente.',
             });
 
-            cargarPasantias();
+            await cargarPasantias();
         } catch (error: any) {
             setAviso({
                 tipo: 'error',
@@ -167,6 +169,12 @@ export const JefePasantiasPanel: React.FC = () => {
     };
 
     const handleEliminarActividad = async (actividad: ActividadJefe) => {
+        const confirmado = window.confirm(
+            `¿Seguro que deseas eliminar la actividad "${actividad.titulo}"?`
+        );
+
+        if (!confirmado) return;
+
         setEliminando(actividad.id_actividad);
         setAviso(null);
 
@@ -184,6 +192,7 @@ export const JefePasantiasPanel: React.FC = () => {
                         actividades: (pasantia.actividades || []).filter(
                             (item) => item.id_actividad !== actividad.id_actividad
                         ),
+                        actividades_count: Math.max((pasantia.actividades_count || 1) - 1, 0),
                     };
                 })
             );
@@ -246,78 +255,71 @@ export const JefePasantiasPanel: React.FC = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5 min-h-[calc(100vh-120px)]">
             {aviso && <AvisoTailwind aviso={aviso} />}
 
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
                 <div>
                     <h2 className="text-2xl font-montserrat font-bold text-institucional-blue">
                         Mis Pasantías
                     </h2>
 
                     <p className="text-sm text-medium-gray">
-                        Selecciona una pasantía y registra actividades dentro de su
-                        calendario.
+                        Selecciona una pasantía y el calendario mostrará solo sus actividades.
                     </p>
+                </div>
+
+                <div className="bg-white-main border border-light-gray rounded-xl px-4 py-3 shadow-sm flex gap-5 text-sm">
+                    <div>
+                        <p className="text-xs text-medium-gray font-semibold">
+                            Pasantía activa
+                        </p>
+
+                        <p className="font-bold text-institucional-blue">
+                            {pasantiaActiva.nombre}
+                        </p>
+                    </div>
+
+                    <div className="border-l border-light-gray pl-5">
+                        <p className="text-xs text-medium-gray font-semibold">
+                            Actividades
+                        </p>
+
+                        <p className="font-bold text-main-green">
+                            {actividades.length}
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-1 space-y-4">
-                    <h3 className="text-lg font-bold text-institucional-blue">
-                        Pasantías asignadas
-                    </h3>
+            <div className="grid grid-cols-1 2xl:grid-cols-[330px_1fr] gap-5 items-start">
+                <aside className="space-y-4 2xl:sticky 2xl:top-4">
+                    <PanelPasantias
+                        pasantias={pasantias}
+                        idPasantiaActiva={pasantiaActiva.id_pasantia}
+                        onSeleccionar={setIdPasantiaActiva}
+                    />
 
-                    {pasantias.map((pasantia) => {
-                        const activa = pasantia.id_pasantia === pasantiaActiva.id_pasantia;
+                    <ListaActividades
+                        actividades={actividades}
+                        onEditarActividad={abrirEditarActividad}
+                    />
+                </aside>
 
-                        return (
-                            <button
-                                key={pasantia.id_pasantia}
-                                type="button"
-                                onClick={() => setIdPasantiaActiva(pasantia.id_pasantia)}
-                                className={`w-full text-left bg-white-main p-5 rounded-xl shadow-sm border transition-all ${activa
-                                        ? 'border-main-green ring-2 ring-main-green/20'
-                                        : 'border-light-gray hover:border-secondary-blue'
-                                    }`}
-                            >
-                                <div className="flex items-start gap-3">
-                                    <Briefcase
-                                        className={activa ? 'text-main-green' : 'text-medium-gray'}
-                                        size={28}
-                                    />
-
-                                    <div>
-                                        <p className="font-bold text-institucional-blue">
-                                            {pasantia.nombre}
-                                        </p>
-
-                                        <p className="text-xs text-medium-gray mt-1">
-                                            {pasantia.fecha_inicio} hasta {pasantia.fecha_fin}
-                                        </p>
-
-                                        <p className="text-xs text-dark-gray mt-2 line-clamp-2">
-                                            {pasantia.descripcion}
-                                        </p>
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                <div className="xl:col-span-2 space-y-6">
+                <main className="min-w-0">
                     <ResumenPasantia pasantia={pasantiaActiva} />
 
-                    <CalendarioPasantia
-                        pasantia={pasantiaActiva}
-                        actividades={actividades}
-                        eliminando={eliminando}
-                        onFechaClick={abrirCrearActividad}
-                        onEditarActividad={abrirEditarActividad}
-                        onEliminarActividad={handleEliminarActividad}
-                    />
-                </div>
+                    <div className="mt-5">
+                        <CalendarioPasantia
+                            pasantia={pasantiaActiva}
+                            actividades={actividades}
+                            eliminando={eliminando}
+                            onFechaClick={abrirCrearActividad}
+                            onEditarActividad={abrirEditarActividad}
+                            onEliminarActividad={handleEliminarActividad}
+                        />
+                    </div>
+                </main>
             </div>
 
             <ActividadJefeModal
@@ -339,42 +341,195 @@ export const JefePasantiasPanel: React.FC = () => {
     );
 };
 
+interface PanelPasantiasProps {
+    pasantias: PasantiaAsignada[];
+    idPasantiaActiva: number;
+    onSeleccionar: (idPasantia: number) => void;
+}
+
+const PanelPasantias: React.FC<PanelPasantiasProps> = ({
+    pasantias,
+    idPasantiaActiva,
+    onSeleccionar,
+}) => {
+    return (
+        <div className="bg-white-main rounded-2xl shadow-sm border border-light-gray overflow-hidden">
+            <div className="px-5 py-4 border-b border-light-gray bg-light-gray/30">
+                <h3 className="text-base font-bold text-institucional-blue">
+                    Pasantías asignadas
+                </h3>
+
+                <p className="text-xs text-medium-gray">
+                    Cambia de pasantía para actualizar el calendario.
+                </p>
+            </div>
+
+            <div className="p-3 space-y-3 max-h-[42vh] 2xl:max-h-[58vh] overflow-y-auto">
+                {pasantias.map((pasantia) => {
+                    const activa = pasantia.id_pasantia === idPasantiaActiva;
+
+                    return (
+                        <button
+                            key={pasantia.id_pasantia}
+                            type="button"
+                            onClick={() => onSeleccionar(pasantia.id_pasantia)}
+                            className={`w-full text-left p-4 rounded-xl border transition-all ${
+                                activa
+                                    ? 'bg-main-green/10 border-main-green ring-2 ring-main-green/20'
+                                    : 'bg-white-main border-light-gray hover:border-secondary-blue hover:bg-light-gray/20'
+                            }`}
+                        >
+                            <div className="flex items-start gap-3">
+                                <Briefcase
+                                    className={activa ? 'text-main-green' : 'text-medium-gray'}
+                                    size={24}
+                                />
+
+                                <div className="min-w-0">
+                                    <p className="font-bold text-institucional-blue line-clamp-2">
+                                        {pasantia.nombre}
+                                    </p>
+
+                                    <p className="text-[11px] text-medium-gray mt-1">
+                                        {formatearFechaTexto(pasantia.fecha_inicio)} -{' '}
+                                        {formatearFechaTexto(pasantia.fecha_fin)}
+                                    </p>
+
+                                    <div className="flex flex-wrap gap-2 mt-3">
+                                        <span className="text-[11px] bg-institucional-blue/10 text-institucional-blue px-2 py-1 rounded">
+                                            {pasantia.actividades?.length || pasantia.actividades_count || 0} act.
+                                        </span>
+
+                                        <span className="text-[11px] bg-main-green/10 text-main-green px-2 py-1 rounded">
+                                            {pasantia.pasantes_aprobados_count || 0} pasantes
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+interface ListaActividadesProps {
+    actividades: ActividadJefe[];
+    onEditarActividad: (actividad: ActividadJefe) => void;
+}
+
+const ListaActividades: React.FC<ListaActividadesProps> = ({
+    actividades,
+    onEditarActividad,
+}) => {
+    return (
+        <div className="bg-white-main rounded-2xl shadow-sm border border-light-gray overflow-hidden">
+            <div className="px-5 py-4 border-b border-light-gray bg-light-gray/30">
+                <h3 className="text-base font-bold text-institucional-blue">
+                    Actividades de la pasantía
+                </h3>
+
+                <p className="text-xs text-medium-gray">
+                    Solo se listan las actividades de la pasantía seleccionada.
+                </p>
+            </div>
+
+            <div className="p-3 space-y-3 max-h-[32vh] 2xl:max-h-[45vh] overflow-y-auto">
+                {actividades.length === 0 ? (
+                    <div className="text-center text-sm text-medium-gray py-6">
+                        No hay actividades registradas.
+                    </div>
+                ) : (
+                    actividades.map((actividad) => (
+                        <button
+                            key={actividad.id_actividad}
+                            type="button"
+                            onClick={() => onEditarActividad(actividad)}
+                            className="w-full text-left border border-light-gray hover:border-secondary-blue rounded-xl p-3 transition-colors"
+                        >
+                            <div className="flex items-start gap-2">
+                                <span
+                                    className={`w-3 h-3 rounded-full mt-1 shrink-0 ${obtenerClasePuntoColor(
+                                        actividad.color
+                                    )}`}
+                                />
+
+                                <div className="min-w-0">
+                                    <p className="font-bold text-sm text-institucional-blue line-clamp-1">
+                                        {actividad.titulo}
+                                    </p>
+
+                                    <p className="text-xs text-medium-gray line-clamp-2 mt-1">
+                                        {actividad.descripcion}
+                                    </p>
+
+                                    <p className="text-[11px] text-dark-gray mt-2 flex items-center gap-1">
+                                        <Calendar size={11} />
+                                        {formatearFechaTexto(actividad.fecha_inicio)} -{' '}
+                                        {formatearFechaTexto(actividad.fecha_fin)}
+                                    </p>
+
+                                    <p className="text-[11px] text-medium-gray mt-1 flex items-center gap-1">
+                                        <UserCircle size={11} />
+                                        {obtenerNombrePasante(actividad)}
+                                    </p>
+                                </div>
+                            </div>
+                        </button>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+};
+
 interface ResumenPasantiaProps {
     pasantia: PasantiaAsignada;
 }
 
 const ResumenPasantia: React.FC<ResumenPasantiaProps> = ({ pasantia }) => {
     return (
-        <div className="bg-white-main p-6 rounded-xl shadow-sm border border-light-gray">
-            <div className="flex items-start gap-3">
-                <CheckCircle2 className="text-main-green mt-1" size={30} />
+        <div className="bg-white-main p-5 rounded-2xl shadow-sm border border-light-gray">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+                <div className="flex items-start gap-3">
+                    <CheckCircle2 className="text-main-green mt-1 shrink-0" size={30} />
 
-                <div>
-                    <h3 className="text-lg font-bold text-institucional-blue">
-                        {pasantia.nombre}
-                    </h3>
+                    <div>
+                        <h3 className="text-lg font-bold text-institucional-blue">
+                            {pasantia.nombre}
+                        </h3>
 
-                    <p className="text-sm text-dark-gray mt-2">{pasantia.descripcion}</p>
+                        <p className="text-sm text-dark-gray mt-1 line-clamp-2">
+                            {pasantia.descripcion}
+                        </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-dark-gray mt-5">
-                        <DatoResumen
-                            icono={<Calendar size={16} />}
-                            label="Inicio"
-                            valor={pasantia.fecha_inicio}
-                        />
-
-                        <DatoResumen
-                            icono={<Calendar size={16} />}
-                            label="Fin"
-                            valor={pasantia.fecha_fin}
-                        />
-
-                        <DatoResumen
-                            icono={<Clock size={16} />}
-                            label="Horario"
-                            valor={pasantia.horario}
-                        />
+                        {pasantia.empresa?.nombre && (
+                            <p className="text-xs text-medium-gray mt-2">
+                                Empresa: {pasantia.empresa.nombre}
+                            </p>
+                        )}
                     </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 xl:w-[520px]">
+                    <DatoResumen
+                        icono={<Calendar size={16} />}
+                        label="Inicio"
+                        valor={formatearFechaTexto(pasantia.fecha_inicio)}
+                    />
+
+                    <DatoResumen
+                        icono={<Calendar size={16} />}
+                        label="Fin"
+                        valor={formatearFechaTexto(pasantia.fecha_fin)}
+                    />
+
+                    <DatoResumen
+                        icono={<Clock size={16} />}
+                        label="Horario"
+                        valor={pasantia.horario || 'No definido'}
+                    />
                 </div>
             </div>
         </div>
@@ -395,7 +550,7 @@ const DatoResumen: React.FC<DatoResumenProps> = ({ icono, label, valor }) => {
                 {label}
             </p>
 
-            <p className="font-bold text-dark-gray mt-1">{valor}</p>
+            <p className="font-bold text-dark-gray mt-1 text-sm">{valor}</p>
         </div>
     );
 };
@@ -422,101 +577,144 @@ const CalendarioPasantia: React.FC<CalendarioPasantiaProps> = ({
         pasantia.fecha_fin.substring(0, 10)
     );
 
-    const espaciosIniciales = obtenerEspaciosIniciales(dias[0]);
+    const espaciosIniciales = dias.length > 0 ? obtenerEspaciosIniciales(dias[0]) : 0;
 
     return (
-        <div className="bg-white-main p-6 rounded-xl shadow-sm border border-light-gray">
-            <div className="flex items-center justify-between gap-4 mb-5">
+        <div className="bg-white-main rounded-2xl shadow-sm border border-light-gray overflow-hidden">
+            <div className="px-5 py-4 border-b border-light-gray flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white-main">
                 <div>
-                    <h3 className="text-lg font-bold text-institucional-blue">
-                        Calendario de Actividades
+                    <h3 className="text-xl font-bold text-institucional-blue">
+                        Calendario de actividades
                     </h3>
 
                     <p className="text-sm text-medium-gray">
-                        Haz clic en una fecha para agregar una actividad.
+                        Haz clic en una casilla para crear una actividad en esa fecha.
                     </p>
                 </div>
 
-                <span className="text-xs font-bold bg-main-green/10 text-main-green px-3 py-1 rounded-full">
-                    {actividades.length} actividades
-                </span>
+                <div className="flex flex-wrap gap-2">
+                    <span className="text-xs font-bold bg-main-green/10 text-main-green px-3 py-1.5 rounded-full">
+                        {actividades.length} actividades
+                    </span>
+
+                    <span className="text-xs font-bold bg-institucional-blue/10 text-institucional-blue px-3 py-1.5 rounded-full">
+                        {dias.length} días
+                    </span>
+                </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-2 mb-2">
-                {diasSemana.map((dia) => (
-                    <div
-                        key={dia}
-                        className="text-center text-xs font-bold text-medium-gray uppercase"
-                    >
-                        {dia}
-                    </div>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-2">
-                {Array.from({ length: espaciosIniciales }).map((_, index) => (
-                    <div key={`empty-${index}`} />
-                ))}
-
-                {dias.map((fecha) => {
-                    const actividadesDelDia = actividades.filter((actividad) =>
-                        actividadCubreFecha(actividad, fecha)
-                    );
-
-                    return (
-                        <button
-                            key={fecha}
-                            type="button"
-                            onClick={() => onFechaClick(fecha)}
-                            className="min-h-32 bg-light-gray/30 hover:bg-main-green/10 border border-light-gray rounded-xl p-2 text-left transition-colors"
+            <div className="p-4 md:p-5">
+                <div className="grid grid-cols-7 gap-2 mb-2">
+                    {diasSemana.map((dia) => (
+                        <div
+                            key={dia}
+                            className="text-center text-xs md:text-sm font-bold text-medium-gray uppercase py-2 bg-light-gray/40 rounded-lg"
                         >
-                            <div className="flex justify-between items-start">
-                                <span className="text-xs font-bold text-institucional-blue">
-                                    {obtenerDiaMes(fecha)}
-                                </span>
+                            {dia}
+                        </div>
+                    ))}
+                </div>
 
-                                <Plus size={14} className="text-main-green" />
-                            </div>
+                <div className="grid grid-cols-7 gap-2 md:gap-3">
+                    {Array.from({ length: espaciosIniciales }).map((_, index) => (
+                        <div
+                            key={`empty-${index}`}
+                            className="min-h-[9rem] md:min-h-[12rem] xl:min-h-[14rem] 2xl:min-h-[16rem] rounded-xl border border-transparent"
+                        />
+                    ))}
 
-                            <div className="mt-2 space-y-1">
-                                {actividadesDelDia.map((actividad) => (
-                                    <div
-                                        key={actividad.id_actividad}
-                                        className="bg-white-main border border-main-green/30 rounded-lg px-2 py-1 shadow-sm"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <p className="text-[11px] font-bold text-institucional-blue line-clamp-1">
-                                            {actividad.titulo}
+                    {dias.map((fecha) => {
+                        const actividadesDelDia = actividades.filter((actividad) =>
+                            actividadCubreFecha(actividad, fecha)
+                        );
+
+                        return (
+                            <button
+                                key={fecha}
+                                type="button"
+                                onClick={() => onFechaClick(fecha)}
+                                className={`min-h-[9rem] md:min-h-[12rem] xl:min-h-[14rem] 2xl:min-h-[16rem] border rounded-2xl p-2 md:p-3 text-left transition-all group ${
+                                    actividadesDelDia.length > 0
+                                        ? 'bg-main-green/5 border-main-green/25 hover:bg-main-green/10'
+                                        : 'bg-light-gray/20 border-light-gray hover:bg-institucional-blue/5 hover:border-secondary-blue/40'
+                                }`}
+                            >
+                                <div className="flex justify-between items-start gap-2">
+                                    <div>
+                                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white-main border border-light-gray text-sm font-extrabold text-institucional-blue shadow-sm">
+                                            {obtenerDiaMes(fecha)}
+                                        </span>
+
+                                        <p className="text-[10px] md:text-xs text-medium-gray mt-1">
+                                            {obtenerNombreDiaCompleto(fecha)}
                                         </p>
-
-                                        <p className="text-[10px] text-medium-gray line-clamp-1">
-                                            {actividad.descripcion}
-                                        </p>
-
-                                        <div className="flex gap-1 mt-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => onEditarActividad(actividad)}
-                                                className="text-[10px] px-2 py-1 rounded bg-secondary-blue text-white-main hover:bg-institucional-blue"
-                                            >
-                                                <Edit size={10} />
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                disabled={eliminando === actividad.id_actividad}
-                                                onClick={() => onEliminarActividad(actividad)}
-                                                className="text-[10px] px-2 py-1 rounded bg-red-600 text-white-main hover:bg-red-700 disabled:opacity-60"
-                                            >
-                                                <Trash2 size={10} />
-                                            </button>
-                                        </div>
                                     </div>
-                                ))}
-                            </div>
-                        </button>
-                    );
-                })}
+
+                                    <Plus
+                                        size={18}
+                                        className="text-main-green opacity-60 group-hover:opacity-100"
+                                    />
+                                </div>
+
+                                <div className="mt-3 space-y-2">
+                                    {actividadesDelDia.length === 0 ? (
+                                        <p className="text-[11px] text-medium-gray italic mt-6 text-center">
+                                            Sin actividad
+                                        </p>
+                                    ) : (
+                                        actividadesDelDia.map((actividad) => (
+                                            <div
+                                                key={actividad.id_actividad}
+                                                className={`border rounded-xl px-2.5 py-2 shadow-sm ${obtenerClaseActividad(
+                                                    actividad.color
+                                                )}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs md:text-sm font-bold line-clamp-2">
+                                                            {actividad.titulo}
+                                                        </p>
+
+                                                        <p className="text-[10px] md:text-xs opacity-80 line-clamp-2 mt-1">
+                                                            {actividad.descripcion}
+                                                        </p>
+
+                                                        <p className="text-[10px] md:text-xs opacity-90 mt-2 flex items-center gap-1">
+                                                            <UserCircle size={11} />
+                                                            {obtenerNombrePasante(actividad)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-1 mt-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onEditarActividad(actividad)}
+                                                        className="px-2 py-1 rounded-lg bg-secondary-blue text-white-main hover:bg-institucional-blue"
+                                                        title="Editar"
+                                                    >
+                                                        <Edit size={12} />
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        disabled={eliminando === actividad.id_actividad}
+                                                        onClick={() => onEliminarActividad(actividad)}
+                                                        className="px-2 py-1 rounded-lg bg-red-600 text-white-main hover:bg-red-700 disabled:opacity-60"
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );
@@ -555,9 +753,19 @@ const obtenerEspaciosIniciales = (fecha: string) => {
 };
 
 const obtenerDiaMes = (fecha: string) => {
-    const date = crearFechaLocal(fecha);
+    return crearFechaLocal(fecha).getDate();
+};
 
-    return date.getDate();
+const obtenerNombreDiaCompleto = (fecha: string) => {
+    return crearFechaLocal(fecha).toLocaleDateString('es-BO', {
+        weekday: 'short',
+    });
+};
+
+const formatearFechaTexto = (fecha?: string) => {
+    if (!fecha) return 'Sin fecha';
+
+    return crearFechaLocal(fecha.substring(0, 10)).toLocaleDateString('es-BO');
 };
 
 const actividadCubreFecha = (actividad: ActividadJefe, fecha: string) => {
@@ -565,6 +773,40 @@ const actividadCubreFecha = (actividad: ActividadJefe, fecha: string) => {
     const fin = actividad.fecha_fin.substring(0, 10);
 
     return fecha >= inicio && fecha <= fin;
+};
+
+const obtenerNombrePasante = (actividad: ActividadJefe) => {
+    const usuario = actividad.pasante?.usuario;
+
+    if (!usuario) {
+        return 'Sin pasante asignado';
+    }
+
+    return `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim();
+};
+
+const obtenerClaseActividad = (color?: string) => {
+    const clases: Record<string, string> = {
+        verde: 'bg-main-green/10 border-main-green/30 text-main-green',
+        azul: 'bg-institucional-blue/10 border-institucional-blue/30 text-institucional-blue',
+        morado: 'bg-purple-100 border-purple-200 text-purple-700',
+        naranja: 'bg-orange-100 border-orange-200 text-orange-700',
+        rojo: 'bg-red-100 border-red-200 text-red-700',
+    };
+
+    return clases[color || 'azul'] || clases.azul;
+};
+
+const obtenerClasePuntoColor = (color?: string) => {
+    const clases: Record<string, string> = {
+        verde: 'bg-main-green',
+        azul: 'bg-institucional-blue',
+        morado: 'bg-purple-600',
+        naranja: 'bg-orange-500',
+        rojo: 'bg-red-600',
+    };
+
+    return clases[color || 'azul'] || clases.azul;
 };
 
 const AvisoTailwind: React.FC<{ aviso: Aviso }> = ({ aviso }) => {

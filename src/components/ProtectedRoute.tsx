@@ -5,7 +5,7 @@ import { me } from '../services/authService';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
-    rolPermitido?: 'GER_EMP' | 'PAS' | 'ENC_PAS';
+    rolPermitido?: 'GER_EMP' | 'PAS' | 'ENC_PAS' | 'TUT' | 'TUTOR' | 'ADMIN';
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
