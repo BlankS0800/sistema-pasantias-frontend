@@ -66,7 +66,6 @@ export interface BoletaEvaluacion {
   informe_final?: InformeFinal | null;
   actividades_count?: number;
   actividades_completadas_count?: number;
-  nota_calculada?: number;
   evaluado?: boolean;
 }
 
@@ -85,7 +84,6 @@ interface CalculoResponse {
   message: string;
   boleta: BoletaEvaluacion;
   actividades: ActividadEvaluacion[];
-  nota: number;
   resumen: string;
   ya_evaluado: boolean;
 }
@@ -148,6 +146,7 @@ export const calcularEvaluacionFinal = async (
 
 export const registrarEvaluacionFinal = async (
   id_boleta: number,
+  nota: number,
   observacion: string,
   descripcion: string
 ): Promise<InformeResponse> => {
@@ -155,6 +154,7 @@ export const registrarEvaluacionFinal = async (
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({
+      nota,
       observacion,
       descripcion,
     }),

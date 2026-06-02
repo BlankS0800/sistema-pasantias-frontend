@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import {
+  AlertCircle,
   Award,
   Briefcase,
-  Calculator,
+  Building2,
+  Calendar,
   CheckCircle2,
   Eye,
   FileCheck,
-  Printer,
+  FileText,
+  GraduationCap,
+  Save,
+  Search,
   UserCircle,
   X,
 } from 'lucide-react';
@@ -22,168 +27,276 @@ import {
 import type {
   ActividadEvaluacion,
   BoletaEvaluacion,
-  InformeFinal,
   Pasantia,
 } from '../../services/evaluacionJefeService';
 
+type Mensaje = {
+  tipo: 'exito' | 'error' | 'info';
+  texto: string;
+};
+
 export const EvaluacionFinalPanel: React.FC = () => {
   const [pasantias, setPasantias] = useState<Pasantia[]>([]);
-  const [idPasantiaActiva, setIdPasantiaActiva] = useState<number | null>(null);
+  const [pasantiaSeleccionada, setPasantiaSeleccionada] =
+    useState<Pasantia | null>(null);
+
   const [boletas, setBoletas] = useState<BoletaEvaluacion[]>([]);
-  const [boletaSeleccionada, setBoletaSeleccionada] = useState<BoletaEvaluacion | null>(null);
+  const [boletaSeleccionada, setBoletaSeleccionada] =
+    useState<BoletaEvaluacion | null>(null);
+
   const [actividades, setActividades] = useState<ActividadEvaluacion[]>([]);
-  const [notaCalculada, setNotaCalculada] = useState<number>(0);
   const [resumen, setResumen] = useState('');
+
+  const [notaManual, setNotaManual] = useState('');
   const [observacion, setObservacion] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [certificadoHtml, setCertificadoHtml] = useState<string | null>(null);
 
-  const [cargando, setCargando] = useState(true);
+  const [cargandoPasantias, setCargandoPasantias] = useState(true);
   const [cargandoBoletas, setCargandoBoletas] = useState(false);
-  const [procesando, setProcesando] = useState(false);
+  const [cargandoEvaluacion, setCargandoEvaluacion] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
-  const [mensaje, setMensaje] = useState<{
-    tipo: 'exito' | 'error' | 'info';
-    texto: string;
-  } | null>(null);
+  const [modalEvaluacion, setModalEvaluacion] = useState(false);
+  const [mensaje, setMensaje] = useState<Mensaje | null>(null);
 
   useEffect(() => {
     cargarPasantias();
   }, []);
 
-  useEffect(() => {
-    if (idPasantiaActiva) {
-      cargarBoletas(idPasantiaActiva);
-    }
-  }, [idPasantiaActiva]);
-
   const cargarPasantias = async () => {
-    try {
-      setCargando(true);
-      const data = await listarPasantiasEvaluacion();
+    setCargandoPasantias(true);
+    setMensaje(null);
 
+    try {
+      const data = await listarPasantiasEvaluacion();
       setPasantias(data.pasantias || []);
 
       if ((data.pasantias || []).length > 0) {
-        setIdPasantiaActiva(data.pasantias[0].id_pasantia);
+        const primera = data.pasantias[0];
+        setPasantiaSeleccionada(primera);
+        await cargarBoletas(primera.id_pasantia);
       }
     } catch (error: any) {
       setMensaje({
         tipo: 'error',
-        texto: error.message || 'No se pudieron cargar las pasantías.',
+        texto:
+          error.message ||
+          'No se pudieron cargar las pasantías para evaluación.',
       });
     } finally {
-      setCargando(false);
+      setCargandoPasantias(false);
     }
   };
 
-  const cargarBoletas = async (idPasantia: number) => {
-    try {
-      setCargandoBoletas(true);
-      const data = await listarBoletasEvaluacion(idPasantia);
+  const cargarBoletas = async (id_pasantia: number) => {
+    setCargandoBoletas(true);
+    setMensaje(null);
 
+    try {
+      const data = await listarBoletasEvaluacion(id_pasantia);
       setBoletas(data.boletas || []);
     } catch (error: any) {
       setMensaje({
         tipo: 'error',
-        texto: error.message || 'No se pudieron cargar los pasantes.',
+        texto:
+          error.message ||
+          'No se pudieron cargar los pasantes aprobados para evaluación.',
       });
     } finally {
       setCargandoBoletas(false);
     }
   };
 
+  const seleccionarPasantia = async (pasantia: Pasantia) => {
+    setPasantiaSeleccionada(pasantia);
+    setBoletas([]);
+    await cargarBoletas(pasantia.id_pasantia);
+  };
+
   const abrirEvaluacion = async (boleta: BoletaEvaluacion) => {
+    if (boleta.evaluado || boleta.informe_final) {
+      setMensaje({
+        tipo: 'info',
+        texto: 'Este pasante ya tiene evaluación final registrada.',
+      });
+      return;
+    }
+
     setBoletaSeleccionada(boleta);
     setActividades([]);
-    setNotaCalculada(0);
     setResumen('');
+    setNotaManual('');
     setObservacion('');
     setDescripcion('');
+    setModalEvaluacion(true);
+    setCargandoEvaluacion(true);
+    setMensaje(null);
 
     try {
       const data = await calcularEvaluacionFinal(boleta.id_boleta);
 
       setActividades(data.actividades || []);
-      setNotaCalculada(data.nota);
-      setResumen(data.resumen);
-      setDescripcion(data.resumen);
+      setResumen(data.resumen || '');
+
+      /*
+       * Importante:
+       * No cargamos nota sugerida ni nota calculada.
+       * El jefe debe escribir la nota manualmente.
+       */
+      setNotaManual('');
+
+      if (data.resumen) {
+        setDescripcion(data.resumen);
+      }
     } catch (error: any) {
       setMensaje({
         tipo: 'error',
-        texto: error.message || 'No se pudo calcular la evaluación.',
+        texto:
+          error.message ||
+          'No se pudieron cargar los datos para la evaluación final.',
       });
+
+      setModalEvaluacion(false);
+      setBoletaSeleccionada(null);
+    } finally {
+      setCargandoEvaluacion(false);
     }
   };
 
-  const registrarEvaluacion = async () => {
+  const guardarEvaluacion = async () => {
     if (!boletaSeleccionada) return;
 
-    setProcesando(true);
+    const nota = Number(notaManual);
+
+    if (Number.isNaN(nota) || nota < 0 || nota > 100) {
+      setMensaje({
+        tipo: 'error',
+        texto: 'La nota final debe estar entre 0 y 100.',
+      });
+      return;
+    }
+
+    setGuardando(true);
+    setMensaje(null);
 
     try {
       const data = await registrarEvaluacionFinal(
         boletaSeleccionada.id_boleta,
+        nota,
         observacion,
         descripcion
       );
 
       setMensaje({
         tipo: 'exito',
-        texto: data.message || 'Evaluación registrada correctamente.',
+        texto:
+          data.message ||
+          'Evaluación final registrada correctamente.',
       });
 
+      setModalEvaluacion(false);
       setBoletaSeleccionada(null);
+      setActividades([]);
+      setResumen('');
+      setNotaManual('');
+      setObservacion('');
+      setDescripcion('');
 
-      if (idPasantiaActiva) {
-        await cargarBoletas(idPasantiaActiva);
+      if (pasantiaSeleccionada) {
+        await cargarBoletas(pasantiaSeleccionada.id_pasantia);
       }
     } catch (error: any) {
       setMensaje({
         tipo: 'error',
-        texto: error.message || 'No se pudo registrar la evaluación.',
+        texto:
+          error.message ||
+          'No se pudo registrar la evaluación final.',
       });
     } finally {
-      setProcesando(false);
+      setGuardando(false);
     }
   };
 
-  const verCertificado = async (informe?: InformeFinal | null) => {
-    if (!informe) return;
+  const verCertificado = async (id_informe?: number) => {
+    if (!id_informe) {
+      setMensaje({
+        tipo: 'info',
+        texto: 'No existe informe final para mostrar certificado.',
+      });
+      return;
+    }
 
     try {
-      const html = await obtenerCertificadoJefeHtml(informe.id_informe);
-      setCertificadoHtml(html);
+      const html = await obtenerCertificadoJefeHtml(id_informe);
+
+      const nuevaVentana = window.open('', '_blank');
+
+      if (!nuevaVentana) {
+        setMensaje({
+          tipo: 'error',
+          texto: 'El navegador bloqueó la ventana del certificado.',
+        });
+        return;
+      }
+
+      nuevaVentana.document.write(html);
+      nuevaVentana.document.close();
     } catch (error: any) {
       setMensaje({
         tipo: 'error',
-        texto: error.message || 'No se pudo cargar el certificado.',
+        texto:
+          error.message ||
+          'No se pudo cargar el certificado.',
       });
     }
   };
 
-  const nombrePasante = (boleta: BoletaEvaluacion) => {
-    const usuario = boleta.pasante?.usuario;
+  const obtenerNombrePasante = (boleta: BoletaEvaluacion | null) => {
+    const usuario = boleta?.pasante?.usuario;
 
     if (!usuario) return 'Pasante sin datos';
 
     return `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim();
   };
 
-  const cerrarModal = () => {
-    setBoletaSeleccionada(null);
-    setActividades([]);
-    setNotaCalculada(0);
-    setResumen('');
-    setObservacion('');
-    setDescripcion('');
+  const obtenerInstitucion = (boleta: BoletaEvaluacion | null) => {
+    return boleta?.pasante?.institucion?.nombre || 'Sin institución';
   };
 
-  if (cargando) {
+  const formatearFecha = (fecha?: string) => {
+    if (!fecha) return 'Sin fecha';
+
+    return new Date(`${fecha.substring(0, 10)}T00:00:00`).toLocaleDateString(
+      'es-BO'
+    );
+  };
+
+  const obtenerEstadoActividad = (estado?: string) => {
+    if (estado === 'completada') {
+      return {
+        texto: 'Completada',
+        clase: 'bg-main-green/10 text-main-green border-main-green/30',
+      };
+    }
+
+    if (estado === 'en_progreso') {
+      return {
+        texto: 'En progreso',
+        clase: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      };
+    }
+
+    return {
+      texto: 'Pendiente',
+      clase: 'bg-light-gray text-medium-gray border-medium-gray/20',
+    };
+  };
+
+  if (cargandoPasantias) {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-institucional-blue animate-pulse">
-          Cargando evaluaciones...
+        <p className="text-institucional-blue font-semibold animate-pulse">
+          Cargando evaluación final...
         </p>
       </div>
     );
@@ -191,14 +304,30 @@ export const EvaluacionFinalPanel: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div>
-        <h2 className="text-2xl font-montserrat font-bold text-institucional-blue">
-          Evaluación Final
-        </h2>
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-montserrat font-bold text-institucional-blue">
+            Evaluación Final
+          </h2>
 
-        <p className="text-sm text-medium-gray mt-1">
-          Calcula la nota final según las actividades realizadas durante la pasantía.
-        </p>
+          <p className="text-sm text-medium-gray mt-1">
+            Selecciona una pasantía y asigna manualmente la nota final del pasante.
+          </p>
+        </div>
+
+        <div className="bg-white-main border border-light-gray rounded-xl px-4 py-3 shadow-sm flex items-center gap-3">
+          <Award className="text-main-green" size={22} />
+
+          <div>
+            <p className="text-xs text-medium-gray font-bold uppercase">
+              Modo de evaluación
+            </p>
+
+            <p className="text-sm font-bold text-institucional-blue">
+              Nota asignada por el jefe
+            </p>
+          </div>
+        </div>
       </div>
 
       {mensaje && (
@@ -213,239 +342,447 @@ export const EvaluacionFinalPanel: React.FC = () => {
         >
           <span>{mensaje.texto}</span>
 
-          <button type="button" onClick={() => setMensaje(null)}>
+          <button
+            type="button"
+            onClick={() => setMensaje(null)}
+            className="font-bold opacity-70 hover:opacity-100"
+          >
             ×
           </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        <div className="xl:col-span-1 space-y-3">
-          <h3 className="text-lg font-bold text-institucional-blue">
-            Pasantías
-          </h3>
+      <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-6 items-start">
+        <aside className="bg-white-main rounded-2xl shadow-sm border border-light-gray overflow-hidden">
+          <div className="px-5 py-4 border-b border-light-gray bg-light-gray/30">
+            <h3 className="text-base font-bold text-institucional-blue">
+              Pasantías asignadas
+            </h3>
 
-          {pasantias.map((pasantia) => {
-            const activa = pasantia.id_pasantia === idPasantiaActiva;
+            <p className="text-xs text-medium-gray">
+              Selecciona una pasantía para ver sus pasantes aprobados.
+            </p>
+          </div>
 
-            return (
-              <button
-                key={pasantia.id_pasantia}
-                type="button"
-                onClick={() => setIdPasantiaActiva(pasantia.id_pasantia)}
-                className={`w-full text-left bg-white-main p-4 rounded-xl border shadow-sm transition-all ${
-                  activa
-                    ? 'border-main-green ring-2 ring-main-green/20'
-                    : 'border-light-gray hover:border-secondary-blue'
-                }`}
-              >
-                <p className="font-bold text-institucional-blue">
-                  {pasantia.nombre}
-                </p>
-
-                <p className="text-xs text-medium-gray mt-1">
-                  {pasantia.empresa?.nombre || 'Empresa'}
-                </p>
-
-                <div className="flex gap-2 mt-3">
-                  <span className="text-[11px] bg-main-green/10 text-main-green px-2 py-1 rounded">
-                    {pasantia.pasantes_aprobados_count || 0} pasantes
-                  </span>
-
-                  <span className="text-[11px] bg-institucional-blue/10 text-institucional-blue px-2 py-1 rounded">
-                    {pasantia.actividades_count || 0} act.
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="xl:col-span-3">
-          <div className="bg-white-main rounded-xl shadow-sm border border-light-gray overflow-hidden">
-            <div className="p-5 border-b border-light-gray flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-bold text-dark-gray">
-                  Pasantes aprobados
-                </h3>
-
-                <p className="text-sm text-medium-gray">
-                  Selecciona un pasante para generar su informe final.
-                </p>
-              </div>
-
-              <Award className="text-main-green" />
-            </div>
-
-            {cargandoBoletas ? (
-              <div className="p-8 text-center text-institucional-blue animate-pulse">
-                Cargando pasantes...
-              </div>
-            ) : boletas.length === 0 ? (
-              <div className="p-10 text-center">
-                <UserCircle size={46} className="mx-auto text-medium-gray/50 mb-3" />
-                <p className="font-bold text-dark-gray">
-                  No hay pasantes aprobados
-                </p>
-              </div>
+          <div className="p-3 space-y-3 max-h-[70vh] overflow-y-auto">
+            {pasantias.length === 0 ? (
+              <p className="text-center text-medium-gray text-sm py-8">
+                No tienes pasantías para evaluar.
+              </p>
             ) : (
-              <div className="divide-y divide-light-gray">
-                {boletas.map((boleta) => (
-                  <div
-                    key={boleta.id_boleta}
-                    className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+              pasantias.map((pasantia) => {
+                const activa =
+                  pasantiaSeleccionada?.id_pasantia === pasantia.id_pasantia;
+
+                return (
+                  <button
+                    key={pasantia.id_pasantia}
+                    type="button"
+                    onClick={() => seleccionarPasantia(pasantia)}
+                    className={`w-full text-left p-4 rounded-xl border transition-all ${
+                      activa
+                        ? 'bg-main-green/10 border-main-green ring-2 ring-main-green/20'
+                        : 'bg-white-main border-light-gray hover:border-secondary-blue hover:bg-light-gray/20'
+                    }`}
                   >
-                    <div>
-                      <p className="font-bold text-dark-gray">
-                        {nombrePasante(boleta)}
-                      </p>
+                    <div className="flex items-start gap-3">
+                      <Briefcase
+                        className={
+                          activa ? 'text-main-green' : 'text-medium-gray'
+                        }
+                        size={24}
+                      />
 
-                      <p className="text-xs text-medium-gray mt-1">
-                        Actividades: {boleta.actividades_count || 0} | Completadas:{' '}
-                        {boleta.actividades_completadas_count || 0}
-                      </p>
+                      <div className="min-w-0">
+                        <p className="font-bold text-institucional-blue line-clamp-2">
+                          {pasantia.nombre}
+                        </p>
 
-                      <p className="text-xs text-institucional-blue mt-1 font-bold">
-                        Nota calculada: {boleta.nota_calculada || 0}/100
-                      </p>
-                    </div>
+                        <p className="text-xs text-medium-gray mt-1 flex items-center gap-1">
+                          <Building2 size={12} />
+                          {pasantia.empresa?.nombre || 'Sin empresa'}
+                        </p>
 
-                    <div className="flex gap-2">
-                      {boleta.evaluado ? (
-                        <>
-                          <span className="bg-main-green/10 text-main-green px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1">
-                            <CheckCircle2 size={15} />
-                            Evaluado
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <span className="text-[11px] bg-main-green/10 text-main-green px-2 py-1 rounded">
+                            {pasantia.pasantes_aprobados_count || 0} aprobados
                           </span>
 
-                          <button
-                            type="button"
-                            onClick={() => verCertificado(boleta.informe_final)}
-                            className="bg-institucional-blue hover:bg-secondary-blue text-white-main px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1"
-                          >
-                            <Eye size={15} />
-                            Certificado
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => abrirEvaluacion(boleta)}
-                          className="bg-main-green hover:bg-soft-green text-white-main px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1"
-                        >
-                          <Calculator size={15} />
-                          Evaluar
-                        </button>
-                      )}
+                          <span className="text-[11px] bg-institucional-blue/10 text-institucional-blue px-2 py-1 rounded">
+                            {pasantia.actividades_count || 0} actividades
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  </button>
+                );
+              })
             )}
           </div>
-        </div>
+        </aside>
+
+        <main className="bg-white-main rounded-2xl shadow-sm border border-light-gray overflow-hidden">
+          <div className="px-6 py-5 border-b border-light-gray flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-institucional-blue">
+                Pasantes aprobados
+              </h3>
+
+              <p className="text-sm text-medium-gray">
+                {pasantiaSeleccionada
+                  ? `Pasantía: ${pasantiaSeleccionada.nombre}`
+                  : 'Selecciona una pasantía para continuar.'}
+              </p>
+            </div>
+
+            <div className="bg-light-gray/40 px-4 py-2 rounded-xl text-sm font-bold text-dark-gray flex items-center gap-2">
+              <Search size={17} />
+              {boletas.length} pasante(s)
+            </div>
+          </div>
+
+          {cargandoBoletas ? (
+            <div className="p-10 text-center text-institucional-blue font-semibold animate-pulse">
+              Cargando pasantes aprobados...
+            </div>
+          ) : boletas.length === 0 ? (
+            <div className="p-12 text-center">
+              <UserCircle
+                size={52}
+                className="mx-auto text-medium-gray/50 mb-4"
+              />
+
+              <h3 className="font-bold text-dark-gray">
+                No hay pasantes aprobados
+              </h3>
+
+              <p className="text-sm text-medium-gray mt-2">
+                Cuando el gerente apruebe postulaciones, aparecerán aquí.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-light-gray/40 text-dark-gray uppercase text-xs">
+                  <tr>
+                    <th className="px-6 py-4">Pasante</th>
+                    <th className="px-6 py-4">Actividades</th>
+                    <th className="px-6 py-4">Estado evaluación</th>
+                    <th className="px-6 py-4">Nota final</th>
+                    <th className="px-6 py-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-light-gray">
+                  {boletas.map((boleta) => {
+                    const evaluado = boleta.evaluado || boleta.informe_final;
+
+                    return (
+                      <tr
+                        key={boleta.id_boleta}
+                        className="hover:bg-light-gray/20 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-dark-gray">
+                            {obtenerNombrePasante(boleta)}
+                          </p>
+
+                          <p className="text-xs text-medium-gray">
+                            RU:{' '}
+                            {boleta.pasante?.reg_universitario ||
+                              'Sin registro'}
+                          </p>
+                        </td>
+
+                        <td className="px-6 py-4 text-medium-gray">
+                          {boleta.pasante?.institucion?.nombre ||
+                            'Sin institución'}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span className="bg-institucional-blue/10 text-institucional-blue px-2.5 py-1 rounded-full text-xs font-bold">
+                            {boleta.actividades_completadas_count || 0}/
+                            {boleta.actividades_count || 0} completadas
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {evaluado ? (
+                            <span className="bg-main-green/10 text-main-green border border-main-green/30 px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
+                              <CheckCircle2 size={14} />
+                              Evaluado
+                            </span>
+                          ) : (
+                            <span className="bg-yellow-50 text-yellow-700 border border-yellow-200 px-2.5 py-1 rounded-full text-xs font-bold">
+                              Pendiente
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {boleta.informe_final ? (
+                            <span className="font-extrabold text-institucional-blue">
+                              {boleta.informe_final.nota}/100
+                            </span>
+                          ) : (
+                            <span className="text-xs text-medium-gray">
+                              Sin nota
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="flex justify-end gap-2">
+                            {!evaluado ? (
+                              <button
+                                type="button"
+                                onClick={() => abrirEvaluacion(boleta)}
+                                className="bg-main-green hover:bg-soft-green text-white-main px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
+                              >
+                                <Award size={14} />
+                                Asignar nota
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  verCertificado(boleta.informe_final?.id_informe)
+                                }
+                                className="bg-institucional-blue hover:bg-secondary-blue text-white-main px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
+                              >
+                                <Eye size={14} />
+                                Ver certificado
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </main>
       </div>
 
-      {boletaSeleccionada && (
+      {modalEvaluacion && boletaSeleccionada && (
         <div className="fixed inset-0 bg-dark-gray/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-          <div className="bg-white-main w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="bg-white-main w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-5 bg-institucional-blue text-white-main flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-bold">Registrar evaluación final</h3>
+                <h3 className="text-lg font-bold">
+                  Asignar nota
+                </h3>
+
                 <p className="text-xs opacity-90">
-                  {nombrePasante(boletaSeleccionada)}
+                  {obtenerNombrePasante(boletaSeleccionada)} ·{' '}
+                  {obtenerInstitucion(boletaSeleccionada)}
                 </p>
               </div>
 
-              <button type="button" onClick={cerrarModal}>
+              <button
+                type="button"
+                onClick={() => {
+                  setModalEvaluacion(false);
+                  setBoletaSeleccionada(null);
+                }}
+                className="hover:text-red-300"
+              >
                 <X size={22} />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-5">
-              <div className="bg-light-gray/30 rounded-xl p-5 border border-light-gray">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm font-bold text-dark-gray">
-                    Nota final calculada
-                  </p>
-
-                  <span className="text-3xl font-extrabold text-main-green">
-                    {notaCalculada}/100
-                  </span>
-                </div>
-
-                <p className="text-sm text-medium-gray mt-2">
-                  {resumen}
+            <div className="p-6 overflow-y-auto space-y-6">
+              {cargandoEvaluacion ? (
+                <p className="text-center text-institucional-blue animate-pulse">
+                  Cargando datos de evaluación...
                 </p>
-              </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <InfoCard
+                      icono={<UserCircle size={18} />}
+                      label="Pasante"
+                      value={obtenerNombrePasante(boletaSeleccionada)}
+                    />
 
-              <div>
-                <h4 className="font-bold text-dark-gray mb-3">
-                  Actividades evaluadas
-                </h4>
+                    <InfoCard
+                      icono={<GraduationCap size={18} />}
+                      label="Institución"
+                      value={obtenerInstitucion(boletaSeleccionada)}
+                    />
 
-                <div className="space-y-3">
-                  {actividades.map((actividad) => (
-                    <div
-                      key={actividad.id_actividad}
-                      className="border border-light-gray rounded-xl p-4"
-                    >
-                      <div className="flex justify-between gap-4">
-                        <div>
-                          <p className="font-bold text-institucional-blue">
-                            {actividad.titulo}
-                          </p>
+                    <InfoCard
+                      icono={<Briefcase size={18} />}
+                      label="Pasantía"
+                      value={
+                        boletaSeleccionada.pasantia?.nombre ||
+                        pasantiaSeleccionada?.nombre ||
+                        'Sin pasantía'
+                      }
+                    />
+                  </div>
 
-                          <p className="text-sm text-medium-gray mt-1">
-                            {actividad.descripcion}
-                          </p>
-                        </div>
-
-                        <span className="font-extrabold text-main-green">
-                          {actividad.progreso || 0}%
-                        </span>
+                  <div className="border border-light-gray rounded-2xl p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-11 h-11 rounded-xl bg-secondary-blue/10 flex items-center justify-center">
+                        <FileCheck
+                          className="text-secondary-blue"
+                          size={24}
+                        />
                       </div>
 
-                      {actividad.resultado && (
-                        <p className="text-sm text-dark-gray mt-2">
-                          <strong>Resultado:</strong> {actividad.resultado}
+                      <div>
+                        <h4 className="font-bold text-institucional-blue">
+                          Actividades realizadas
+                        </h4>
+
+                        <p className="text-sm text-medium-gray">
+                          Las actividades son solo respaldo para la evaluación.
                         </p>
-                      )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              <div>
-                <label className="text-xs font-bold text-dark-gray uppercase">
-                  Descripción del informe
-                </label>
+                    {actividades.length === 0 ? (
+                      <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-xl p-4 text-sm font-semibold flex items-start gap-2">
+                        <AlertCircle size={18} className="mt-0.5" />
+                        Este pasante no tiene actividades registradas.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {actividades.map((actividad) => {
+                          const estado = obtenerEstadoActividad(
+                            actividad.estado
+                          );
 
-                <textarea
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                  className="mt-2 w-full p-4 rounded-xl border border-light-gray outline-none focus:border-main-green min-h-[100px]"
-                />
-              </div>
+                          return (
+                            <div
+                              key={actividad.id_actividad}
+                              className="border border-light-gray rounded-xl p-4 bg-light-gray/20"
+                            >
+                              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                                <div>
+                                  <h5 className="font-bold text-dark-gray">
+                                    {actividad.titulo}
+                                  </h5>
 
-              <div>
-                <label className="text-xs font-bold text-dark-gray uppercase">
-                  Observación final
-                </label>
+                                  <p className="text-sm text-medium-gray mt-1">
+                                    {actividad.descripcion}
+                                  </p>
 
-                <textarea
-                  value={observacion}
-                  onChange={(e) => setObservacion(e.target.value)}
-                  placeholder="Ej: desempeño destacado, puntualidad, recomendaciones..."
-                  className="mt-2 w-full p-4 rounded-xl border border-light-gray outline-none focus:border-main-green min-h-[100px]"
-                />
-              </div>
+                                  {actividad.resultado && (
+                                    <p className="text-sm text-dark-gray mt-2">
+                                      <strong>Resultado:</strong>{' '}
+                                      {actividad.resultado}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-col items-start md:items-end gap-2">
+                                  <span
+                                    className={`border px-2.5 py-1 rounded-full text-xs font-bold ${estado.clase}`}
+                                  >
+                                    {estado.texto}
+                                  </span>
+
+                                  <span className="text-xs text-medium-gray flex items-center gap-1">
+                                    <Calendar size={12} />
+                                    {formatearFecha(actividad.fecha_inicio)} -{' '}
+                                    {formatearFecha(actividad.fecha_fin)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border border-light-gray rounded-2xl p-5">
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="w-11 h-11 rounded-xl bg-main-green/10 flex items-center justify-center">
+                        <Award className="text-main-green" size={24} />
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-institucional-blue">
+                          Asignar nota
+                        </h4>
+
+                        <p className="text-sm text-medium-gray">
+                          Ingresa manualmente la nota final del pasante.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-dark-gray uppercase">
+                          Nota final del jefe
+                        </label>
+
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={notaManual}
+                          onChange={(e) => setNotaManual(e.target.value)}
+                          className="mt-2 w-full px-4 py-2 bg-light-gray/30 border border-medium-gray/20 rounded-lg focus:border-main-green focus:bg-white-main outline-none"
+                          placeholder="Ingrese la nota final. Ej: 85"
+                        />
+
+                        <p className="text-xs text-medium-gray mt-1">
+                          Esta será la nota registrada en el informe final.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-dark-gray uppercase">
+                          Observación
+                        </label>
+
+                        <textarea
+                          value={observacion}
+                          onChange={(e) => setObservacion(e.target.value)}
+                          className="mt-2 w-full p-4 bg-light-gray/30 border border-medium-gray/20 rounded-xl focus:border-main-green focus:bg-white-main outline-none min-h-[95px]"
+                          placeholder="Escribe una observación sobre el desempeño del pasante..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-dark-gray uppercase">
+                          Descripción del informe
+                        </label>
+
+                        <textarea
+                          value={descripcion}
+                          onChange={(e) => setDescripcion(e.target.value)}
+                          className="mt-2 w-full p-4 bg-light-gray/30 border border-medium-gray/20 rounded-xl focus:border-main-green focus:bg-white-main outline-none min-h-[95px]"
+                          placeholder="Descripción general de la evaluación final..."
+                        />
+
+                        {resumen && (
+                          <p className="text-xs text-medium-gray mt-2">
+                            Resumen generado: {resumen}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="p-5 border-t border-light-gray flex justify-end gap-3">
               <button
                 type="button"
-                onClick={cerrarModal}
+                onClick={() => {
+                  setModalEvaluacion(false);
+                  setBoletaSeleccionada(null);
+                }}
                 className="bg-light-gray text-dark-gray px-5 py-2 rounded-lg text-sm font-bold"
               >
                 Cancelar
@@ -453,52 +790,41 @@ export const EvaluacionFinalPanel: React.FC = () => {
 
               <button
                 type="button"
-                onClick={registrarEvaluacion}
-                disabled={procesando}
+                onClick={guardarEvaluacion}
+                disabled={guardando || cargandoEvaluacion}
                 className="bg-main-green hover:bg-soft-green text-white-main px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-60"
               >
-                <FileCheck size={16} />
-                {procesando ? 'Registrando...' : 'Registrar informe final'}
+                <Save size={16} />
+                {guardando ? 'Guardando...' : 'Registrar nota'}
               </button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+};
 
-      {certificadoHtml && (
-        <div className="fixed inset-0 bg-dark-gray/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-          <div className="bg-white-main w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden h-[92vh] flex flex-col">
-            <div className="p-4 bg-institucional-blue text-white-main flex justify-between items-center">
-              <h3 className="font-bold">Vista previa del certificado</h3>
+const InfoCard: React.FC<{
+  icono: React.ReactNode;
+  label: string;
+  value: string;
+}> = ({ icono, label, value }) => {
+  return (
+    <div className="border border-light-gray rounded-xl p-4 bg-light-gray/20">
+      <div className="flex items-start gap-3">
+        <div className="text-main-green mt-0.5">{icono}</div>
 
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const iframe = document.getElementById('certificado-frame') as HTMLIFrameElement | null;
-                    iframe?.contentWindow?.print();
-                  }}
-                  className="bg-main-green px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"
-                >
-                  <Printer size={16} />
-                  Imprimir
-                </button>
+        <div>
+          <p className="text-xs font-bold text-medium-gray uppercase">
+            {label}
+          </p>
 
-                <button type="button" onClick={() => setCertificadoHtml(null)}>
-                  <X size={22} />
-                </button>
-              </div>
-            </div>
-
-            <iframe
-              id="certificado-frame"
-              title="Certificado"
-              srcDoc={certificadoHtml}
-              className="w-full flex-1 bg-white-main"
-            />
-          </div>
+          <p className="font-semibold text-dark-gray mt-1">
+            {value}
+          </p>
         </div>
-      )}
+      </div>
     </div>
   );
 };

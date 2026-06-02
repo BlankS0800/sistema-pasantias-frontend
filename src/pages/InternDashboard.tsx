@@ -9,7 +9,6 @@ import { ExplorarView } from '../components/pasante/ExplorarView';
 import { BoletaView } from '../components/pasante/BoletaView';
 import { Sidebar } from '../components/pasante/Sidebar';
 import { Header } from '../components/pasante/Header';
-import { ChatWidget } from '../components/pasante/ChatWidget';
 import { CertificadosView } from '../components/pasante/CertificadosView';
 
 type InternModule =
@@ -147,8 +146,6 @@ export const InternDashboard: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-6 md:p-10">
           {renderContent()}
         </div>
-
-        <ChatWidget />
       </main>
     </div>
   );

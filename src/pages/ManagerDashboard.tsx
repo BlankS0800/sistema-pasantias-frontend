@@ -193,13 +193,7 @@ export const ManagerDashboard: React.FC = () => {
       case 'evaluacion':
         return <EvaluacionFinalPanel />;
 
-      case 'reportes':
-        return (
-          <ModuloTemporal
-            titulo="Reportes y Consultas"
-            descripcion="Aquí irán los reportes, gráficos y consultas del sistema de pasantías."
-          />
-        );
+      
 
       default:
         return null;
